@@ -3,20 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface Cliente {
-  id: string;
-  nombre: string;
-  apellido: string;
-  dni: string;
+  email: string;
   puntos: number;
   tiene_promocion: boolean;
 }
 
 interface PanelUsuarioProps {
-  clienteId: string;
+  clienteEmail: string;
   onCerrarSesion: () => void;
 }
 
-export default function PanelUsuario({ clienteId, onCerrarSesion }: PanelUsuarioProps) {
+export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsuarioProps) {
   const navigate = useNavigate();
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -24,7 +21,7 @@ export default function PanelUsuario({ clienteId, onCerrarSesion }: PanelUsuario
 
   useEffect(() => {
     cargarDatosCliente();
-  }, [clienteId]);
+  }, [clienteEmail]);
 
   const cargarDatosCliente = async () => {
     setCargando(true);
@@ -32,8 +29,8 @@ export default function PanelUsuario({ clienteId, onCerrarSesion }: PanelUsuario
     try {
       const { data, error: err } = await supabase
         .from('clientes')
-        .select('id, nombre, apellido, dni, puntos, tiene_promocion')
-        .eq('id', clienteId)
+        .select('email, puntos, tiene_promocion')
+        .eq('email', clienteEmail)
         .single();
 
       if (err) throw err;
@@ -80,114 +77,119 @@ export default function PanelUsuario({ clienteId, onCerrarSesion }: PanelUsuario
     );
   }
 
+  const puntosParaPromo = 10;
+  const progreso = Math.min((cliente.puntos / puntosParaPromo) * 100, 100);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
       {/* Header */}
       <header className="bg-[#16213e]/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div
-            className="flex items-center gap-3 cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-xl">
-              <i className="ri-user-line text-xl text-[#1a1a2e]"></i>
-            </div>
-            <span className="text-2xl font-bold text-[#e2b040]">Mi Cuenta</span>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <img
+              src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
+              alt="MServicios"
+              className="w-9 h-9 object-contain"
+            />
+            <span className="text-xl font-bold text-[#e2b040]">MServicios</span>
           </div>
-          <button
-            onClick={handleCerrarSesion}
-            className="flex items-center gap-2 px-5 py-2 bg-transparent border border-red-400/50 text-red-400 rounded-full font-semibold hover:bg-red-400/10 transition-all duration-300 whitespace-nowrap cursor-pointer text-sm"
-          >
-            <i className="ri-logout-box-line"></i>
-            Cerrar Sesión
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/puntos')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#e2b040]/10 border border-[#e2b040]/40 text-[#e2b040] rounded-full text-sm font-semibold hover:bg-[#e2b040]/20 transition-all cursor-pointer whitespace-nowrap"
+            >
+              <i className="ri-medal-line"></i>
+              {cliente.puntos} Puntos
+            </button>
+            <button
+              onClick={handleCerrarSesion}
+              className="flex items-center gap-2 px-4 py-2 bg-transparent border border-red-400/50 text-red-400 rounded-full font-semibold hover:bg-red-400/10 transition-all whitespace-nowrap cursor-pointer text-sm"
+            >
+              <i className="ri-logout-box-line"></i>
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-6 py-12">
-        {/* Bienvenida */}
+        {/* Welcome */}
         <div className="bg-gradient-to-r from-[#e2b040] to-[#f0d080] rounded-2xl p-8 mb-8 text-[#1a1a2e]">
-          <h1 className="text-3xl font-bold mb-2">
-            ¡Hola, {cliente.nombre}!
-          </h1>
-          <p className="text-lg opacity-90">
-            Bienvenido a tu panel de usuario
-          </p>
+          <h1 className="text-3xl font-bold mb-1">¡Bienvenido!</h1>
+          <p className="text-[#1a1a2e]/70 text-sm mb-3">{cliente.email}</p>
+          <p className="text-lg font-medium">Explorá nuestros prestadores y acumulá puntos</p>
         </div>
 
-        {/* Tarjeta de Puntos */}
+        {/* Points card */}
         <div className="bg-[#16213e]/80 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">Tus Puntos</h2>
-              <p className="text-gray-400 text-sm">Acumulá puntos usando nuestros servicios</p>
+              <p className="text-gray-400 text-sm">1 punto por cada contacto vía WhatsApp</p>
             </div>
             <div className="w-16 h-16 bg-[#e2b040]/20 rounded-full flex items-center justify-center">
               <i className="ri-medal-line text-[#e2b040] text-3xl"></i>
             </div>
           </div>
 
-          <div className="bg-[#1a1a2e]/50 rounded-xl p-6 text-center">
-            <div className="text-6xl font-bold text-[#e2b040] mb-2">
-              {cliente.puntos}
-            </div>
-            <p className="text-gray-400">puntos acumulados</p>
+          <div className="flex items-end gap-2 mb-4">
+            <span className="text-6xl font-bold text-[#e2b040]">{cliente.puntos}</span>
+            <span className="text-gray-400 mb-2">/ {puntosParaPromo} puntos</span>
           </div>
 
-          {cliente.tiene_promocion && (
-            <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-lg p-4 flex items-center gap-3">
-              <i className="ri-gift-line text-green-400 text-2xl"></i>
+          {/* Progress bar */}
+          <div className="w-full bg-[#1a1a2e] rounded-full h-3 mb-2">
+            <div
+              className="bg-gradient-to-r from-[#e2b040] to-[#f0d080] h-3 rounded-full transition-all duration-500"
+              style={{ width: `${progreso}%` }}
+            ></div>
+          </div>
+          <p className="text-gray-500 text-xs">
+            {cliente.puntos < puntosParaPromo
+              ? `Te faltan ${puntosParaPromo - cliente.puntos} contactos para obtener el 20% de descuento`
+              : '¡Llegaste a 10 contactos! Tenés tu 20% de descuento disponible'}
+          </p>
+
+          {(cliente.tiene_promocion || cliente.puntos >= puntosParaPromo) && (
+            <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
+                <i className="ri-gift-2-line text-green-400 text-2xl"></i>
+              </div>
               <div>
-                <p className="text-green-400 font-semibold">¡Tenés una promoción disponible!</p>
-                <p className="text-gray-400 text-sm">Contactanos para conocer tu descuento</p>
+                <p className="text-green-400 font-bold text-lg">¡20% de descuento disponible!</p>
+                <p className="text-gray-400 text-sm">Presentalo al contratar un servicio. ¡Ya lo ganaste!</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Información de la cuenta */}
+        {/* How points work */}
         <div className="bg-[#16213e]/80 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 p-8 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Información de la cuenta</h2>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-[#e2b040]/10">
-              <span className="text-gray-400">Nombre completo</span>
-              <span className="text-white font-medium">{cliente.nombre} {cliente.apellido}</span>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-[#e2b040]/10">
-              <span className="text-gray-400">DNI</span>
-              <span className="text-white font-medium">{cliente.dni}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Información sobre puntos */}
-        <div className="bg-[#16213e]/80 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 p-8">
-          <h2 className="text-2xl font-bold text-white mb-4">¿Cómo funcionan los puntos?</h2>
-          <div className="space-y-3 text-gray-400">
+          <h2 className="text-xl font-bold text-white mb-4">¿Cómo funcionan los puntos?</h2>
+          <div className="space-y-3 text-gray-400 text-sm">
             <p className="flex items-start gap-3">
-              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-1"></i>
-              <span>Acumulás puntos cada vez que usás un servicio de nuestros prestadores</span>
+              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
+              <span>Cada vez que contactás un prestador por WhatsApp acumulás <strong className="text-white">1 punto</strong></span>
             </p>
             <p className="flex items-start gap-3">
-              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-1"></i>
-              <span>Los puntos se registran manualmente por el administrador después de confirmar el servicio</span>
+              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
+              <span>Al llegar a <strong className="text-white">10 puntos</strong> desbloqueás un <strong className="text-[#e2b040]">20% de descuento</strong> en tu próximo servicio</span>
             </p>
             <p className="flex items-start gap-3">
-              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-1"></i>
-              <span>Con tus puntos podés obtener descuentos en futuros servicios</span>
+              <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
+              <span>El descuento se aplica directamente con el prestador al momento de contratar</span>
             </p>
           </div>
         </div>
 
-        {/* Botón para buscar servicios */}
-        <div className="mt-8 text-center">
+        {/* Search button */}
+        <div className="text-center">
           <button
             onClick={() => navigate('/usuarios')}
-            className="px-8 py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-full font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer inline-flex items-center gap-2"
+            className="px-8 py-4 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-full font-bold text-base hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all whitespace-nowrap cursor-pointer inline-flex items-center gap-2"
           >
-            <i className="ri-search-line"></i>
-            Buscar Servicios
+            <i className="ri-search-line text-lg"></i>
+            Buscar Prestadores
           </button>
         </div>
       </div>

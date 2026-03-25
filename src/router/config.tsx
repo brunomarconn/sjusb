@@ -8,6 +8,7 @@ const Home = lazy(() => import('../pages/home/page'));
 const Usuarios = lazy(() => import('../pages/usuarios/page'));
 const Prestadores = lazy(() => import('../pages/prestadores/page'));
 const MiCuenta = lazy(() => import('../pages/mi-cuenta/page'));
+const Puntos = lazy(() => import('../pages/puntos/page'));
 /* The NotFound component lives directly in the pages folder */
 const NotFound = lazy(() => import('../pages/NotFound'));
 
@@ -31,6 +32,10 @@ const routes: RouteObject[] = [
   {
     path: '/mi-cuenta',
     element: <MiCuenta />,
+  },
+  {
+    path: '/puntos',
+    element: <Puntos />,
   },
   {
     path: '*',

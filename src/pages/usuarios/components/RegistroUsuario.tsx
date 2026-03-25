@@ -3,74 +3,76 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface RegistroUsuarioProps {
-  onRegistroExitoso: (clienteId: string) => void;
+  onRegistroExitoso: (clienteEmail: string) => void;
   onCambiarALogin: () => void;
 }
 
+const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
+
 export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: RegistroUsuarioProps) {
   const navigate = useNavigate();
-  const [nombre, setNombre] = useState('');
-  const [apellido, setApellido] = useState('');
-  const [dni, setDni] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmar, setConfirmar] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!nombre.trim() || !apellido.trim() || !dni.trim()) {
-      setError('Por favor completá todos los campos');
+    if (!email.trim() || !password.trim() || !confirmar.trim()) {
+      setError('Completá todos los campos');
       return;
     }
 
-    // Validar que el DNI sea numérico
-    if (!/^\d+$/.test(dni.trim())) {
-      setError('El DNI debe contener solo números');
+    if (password.length < 5) {
+      setError('La contraseña debe tener al menos 5 caracteres');
       return;
     }
 
-    if (dni.trim().length < 7 || dni.trim().length > 8) {
-      setError('El DNI debe tener 7 u 8 dígitos');
+    if (!soloLetrasYNumeros.test(password)) {
+      setError('La contraseña no puede tener caracteres especiales');
+      return;
+    }
+
+    if (password !== confirmar) {
+      setError('Las contraseñas no coinciden');
       return;
     }
 
     setCargando(true);
 
     try {
-      // Verificar si el DNI ya existe
       const { data: existente } = await supabase
         .from('clientes')
-        .select('dni')
-        .eq('dni', dni.trim())
+        .select('email')
+        .eq('email', email.trim().toLowerCase())
         .maybeSingle();
 
       if (existente) {
-        setError('Este DNI ya está registrado');
+        setError('Este email ya está registrado. Iniciá sesión.');
         setCargando(false);
         return;
       }
 
-      // Crear nuevo cliente
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('clientes')
         .insert([{
-          nombre: nombre.trim(),
-          apellido: apellido.trim(),
-          dni: dni.trim(),
+          email: email.trim().toLowerCase(),
+          password,
           puntos: 0,
           tiene_promocion: false,
-          email: `${dni.trim()}@mservicios.com`
-        }])
-        .select('id')
-        .single();
+        }]);
 
       if (insertError) throw insertError;
 
-      onRegistroExitoso(data.id);
+      onRegistroExitoso(email.trim().toLowerCase());
     } catch (e) {
-      console.error('Error al registrar usuario:', e);
+      console.error('Error al registrar:', e);
       setError('Error al crear la cuenta. Intentá nuevamente.');
+    } finally {
       setCargando(false);
     }
   };
@@ -92,7 +94,13 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
               <i className="ri-user-add-line text-2xl text-[#1a1a2e]"></i>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Crear Cuenta</h2>
-            <p className="text-gray-400 text-sm">Registrate para acumular puntos</p>
+            <p className="text-gray-400 text-sm">Registrate y empezá a acumular puntos</p>
+          </div>
+
+          {/* Points info banner */}
+          <div className="flex items-center gap-2 px-4 py-3 bg-[#e2b040]/10 border border-[#e2b040]/20 rounded-lg mb-6 text-sm text-[#f0d080]">
+            <i className="ri-medal-line text-[#e2b040] text-base shrink-0"></i>
+            <span>Cada contacto suma 1 punto. ¡Con 10 puntos obtenés un 20% de descuento!</span>
           </div>
 
           {error && (
@@ -102,67 +110,78 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Nombre
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
               <input
-                type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Tu nombre"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                placeholder="tu@email.com"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Apellido
+                Contraseña <span className="text-gray-500 text-xs">(mín. 5 caracteres, sin símbolos)</span>
               </label>
-              <input
-                type="text"
-                value={apellido}
-                onChange={(e) => setApellido(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Tu apellido"
-              />
+              <div className="relative">
+                <input
+                  type={mostrarPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors pr-12"
+                  placeholder="Mínimo 5 caracteres"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword(!mostrarPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2b040] cursor-pointer"
+                >
+                  <i className={mostrarPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                </button>
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                DNI
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Confirmar contraseña</label>
               <input
-                type="text"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Tu número de DNI"
-                maxLength={8}
+                type={mostrarPassword ? 'text' : 'password'}
+                value={confirmar}
+                onChange={(e) => setConfirmar(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                placeholder="Repetí la contraseña"
+                required
               />
             </div>
 
             <button
               type="submit"
               disabled={cargando}
-              className="w-full py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-bold hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all duration-300 disabled:opacity-60 whitespace-nowrap cursor-pointer"
             >
-              {cargando ? 'Creando cuenta...' : 'Crear cuenta'}
+              {cargando ? (
+                <span className="flex items-center justify-center gap-2">
+                  <i className="ri-loader-4-line animate-spin"></i> Creando cuenta...
+                </span>
+              ) : (
+                'Crear cuenta'
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              ¿Ya tenés cuenta?{' '}
-              <button
-                onClick={onCambiarALogin}
-                className="text-[#e2b040] hover:text-[#f0d080] font-medium cursor-pointer"
-              >
-                Iniciá sesión
-              </button>
-            </p>
-          </div>
+          <p className="text-center text-gray-400 text-sm mt-6">
+            ¿Ya tenés cuenta?{' '}
+            <button
+              onClick={onCambiarALogin}
+              className="text-[#e2b040] hover:text-[#f0d080] font-semibold cursor-pointer"
+            >
+              Iniciar sesión
+            </button>
+          </p>
         </div>
       </div>
     </div>

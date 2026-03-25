@@ -243,18 +243,24 @@ export default function Inicio() {
           {/* Botones de sesión — arriba a la derecha */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/usuarios')}
+              onClick={() => document.getElementById('quienes-somos')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-3 py-1.5 bg-transparent text-gray-300 rounded-full text-xs font-semibold hover:text-[#e2b040] transition-all duration-300 whitespace-nowrap cursor-pointer hidden sm:block"
+            >
+              Quiénes Somos
+            </button>
+            <button
+              onClick={() => navigate('/mi-cuenta')}
               className="px-3 py-1.5 bg-transparent border border-[#e2b040] text-[#e2b040] rounded-full text-xs font-semibold hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
             >
               <i className="ri-user-line text-xs"></i>
-              Soy usuario
+              Soy Usuario
             </button>
             <button
               onClick={() => navigate('/prestadores')}
               className="px-3 py-1.5 bg-[#e2b040] text-[#1a1a2e] rounded-full text-xs font-semibold hover:bg-[#f0d080] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-[#e2b040]/30 cursor-pointer"
             >
               <i className="ri-briefcase-line text-xs"></i>
-              Ofrecer servicios
+              Soy Prestador
             </button>
           </div>
         </div>
@@ -282,13 +288,37 @@ export default function Inicio() {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
             Conectamos servicios<br />
             <span className="text-[#e2b040]">con quienes los necesitan</span>
           </h1>
 
+          <p className="text-gray-300 text-base md:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
+            Nuestra plataforma conecta usuarios con prestadores de servicios, facilitando el contacto y promoviendo transparencia, eficiencia y buenos resultados.
+          </p>
+
           {/* Call‑to‑action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+            <button
+              onClick={() => navigate('/mi-cuenta')}
+              className="px-8 py-3.5 bg-[#e2b040] text-[#1a1a2e] rounded-full font-bold text-base hover:bg-[#f0d080] transition-all duration-300 whitespace-nowrap flex items-center gap-2 shadow-lg shadow-[#e2b040]/30 cursor-pointer"
+            >
+              <i className="ri-user-line"></i>
+              Soy Usuario
+            </button>
+            <button
+              onClick={() => navigate('/prestadores')}
+              className="px-8 py-3.5 bg-transparent border-2 border-[#e2b040] text-[#e2b040] rounded-full font-bold text-base hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap flex items-center gap-2 cursor-pointer"
+            >
+              <i className="ri-briefcase-line"></i>
+              Soy Prestador de Servicios
+            </button>
+          </div>
+
+          {/* Points banner */}
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-full text-sm text-[#f0d080] mb-4">
+            <i className="ri-medal-line text-[#e2b040]"></i>
+            <span>Acumulá puntos y obtené un <strong>20% de descuento</strong> en tus servicios</span>
           </div>
 
           {/* Scroll indicator */}

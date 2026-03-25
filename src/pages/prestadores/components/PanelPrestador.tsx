@@ -37,6 +37,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     nombre: '',
     apellido: '',
     email: '',
+    telefono: '',
     categoria: '',
     descripcion: '',
     foto: null as File | null
@@ -64,6 +65,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
           nombre: prestadorInfo.nombre,
           apellido: prestadorInfo.apellido,
           email: prestadorInfo.email,
+          telefono: prestadorInfo.telefono || '',
           categoria: prestadorInfo.categoria,
           descripcion: prestadorInfo.descripcion,
           foto: null
@@ -139,6 +141,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
           nombre: formData.nombre,
           apellido: formData.apellido,
           email: formData.email,
+          telefono: formData.telefono,
           categoria: formData.categoria,
           descripcion: formData.descripcion,
           foto_url: fotoUrl
@@ -230,6 +233,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                             nombre: prestador.nombre,
                             apellido: prestador.apellido,
                             email: prestador.email,
+                            telefono: (prestador as any).telefono || '',
                             categoria: prestador.categoria,
                             descripcion: prestador.descripcion,
                             foto: null
@@ -312,6 +316,25 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                       />
                     ) : (
                       <p className="text-gray-300 text-base">{formData.email}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-white text-sm font-semibold mb-2">
+                      Teléfono WhatsApp
+                      <span className="text-gray-500 text-xs ml-2">(con código de área)</span>
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        name="telefono"
+                        value={formData.telefono}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-[#16213e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
+                        placeholder="Ej: 1123456789"
+                      />
+                    ) : (
+                      <p className="text-gray-300 text-base">{formData.telefono || 'No especificado'}</p>
                     )}
                   </div>
 

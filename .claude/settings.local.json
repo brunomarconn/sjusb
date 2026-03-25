@@ -4,7 +4,16 @@
       "Bash(for f:*)",
       "Bash(do echo:*)",
       "Read(//c/Users/franc/OneDrive/Documentos/servicios/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(ls -la C:/Users/franc/OneDrive/Documentos/servicios/.env*)",
+      "Bash(find C:/Users/franc/OneDrive/Documentos/servicios -maxdepth 1 -name .env*)",
+      "Bash(npx tsc:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm:*)",
+      "Bash(command -v npm)",
+      "Bash(npm run:*)",
+      "Bash(where npm.cmd)",
+      "Read(//c/Program Files/nodejs//**)"
     ]
   }
 }

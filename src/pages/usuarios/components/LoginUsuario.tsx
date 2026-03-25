@@ -3,28 +3,36 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface LoginUsuarioProps {
-  onLoginExitoso: (clienteId: string) => void;
+  onLoginExitoso: (clienteEmail: string) => void;
   onCambiarARegistro: () => void;
 }
 
+const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
+
 export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: LoginUsuarioProps) {
   const navigate = useNavigate();
-  const [dni, setDni] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!dni.trim()) {
-      setError('Por favor ingresá tu DNI');
+    if (!email.trim() || !password.trim()) {
+      setError('Completá todos los campos');
       return;
     }
 
-    // Validar que el DNI sea numérico
-    if (!/^\d+$/.test(dni.trim())) {
-      setError('El DNI debe contener solo números');
+    if (password.length < 5) {
+      setError('La contraseña debe tener al menos 5 caracteres');
+      return;
+    }
+
+    if (!soloLetrasYNumeros.test(password)) {
+      setError('La contraseña no puede tener caracteres especiales');
       return;
     }
 
@@ -33,22 +41,29 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
     try {
       const { data, error: err } = await supabase
         .from('clientes')
-        .select('id, dni')
-        .eq('dni', dni.trim())
+        .select('email, password, puntos, tiene_promocion')
+        .eq('email', email.trim().toLowerCase())
         .maybeSingle();
 
       if (err) throw err;
 
       if (!data) {
-        setError('DNI no encontrado. Por favor registrate primero.');
+        setError('Email no registrado. ¿Querés crear una cuenta?');
         setCargando(false);
         return;
       }
 
-      onLoginExitoso(data.id);
+      if (data.password !== password) {
+        setError('Contraseña incorrecta');
+        setCargando(false);
+        return;
+      }
+
+      onLoginExitoso(data.email);
     } catch (e) {
       console.error('Error al iniciar sesión:', e);
       setError('Error al iniciar sesión. Intentá nuevamente.');
+    } finally {
       setCargando(false);
     }
   };
@@ -70,7 +85,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
               <i className="ri-user-line text-2xl text-[#1a1a2e]"></i>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-400 text-sm">Ingresá con tu DNI</p>
+            <p className="text-gray-400 text-sm">Ingresá con tu email y contraseña</p>
           </div>
 
           {error && (
@@ -82,39 +97,62 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                DNI
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
               <input
-                type="text"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Tu número de DNI"
-                maxLength={8}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                placeholder="tu@email.com"
+                required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Contraseña</label>
+              <div className="relative">
+                <input
+                  type={mostrarPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors pr-12"
+                  placeholder="Mínimo 5 caracteres"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword(!mostrarPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2b040] cursor-pointer"
+                >
+                  <i className={mostrarPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={cargando}
-              className="w-full py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-bold hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all duration-300 disabled:opacity-60 whitespace-nowrap cursor-pointer"
             >
-              {cargando ? 'Ingresando...' : 'Ingresar'}
+              {cargando ? (
+                <span className="flex items-center justify-center gap-2">
+                  <i className="ri-loader-4-line animate-spin"></i> Ingresando...
+                </span>
+              ) : (
+                'Ingresar'
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              ¿No tenés cuenta?{' '}
-              <button
-                onClick={onCambiarARegistro}
-                className="text-[#e2b040] hover:text-[#f0d080] font-medium cursor-pointer"
-              >
-                Registrate acá
-              </button>
-            </p>
-          </div>
+          <p className="text-center text-gray-400 text-sm mt-6">
+            ¿No tenés cuenta?{' '}
+            <button
+              onClick={onCambiarARegistro}
+              className="text-[#e2b040] hover:text-[#f0d080] font-semibold cursor-pointer"
+            >
+              Registrate gratis
+            </button>
+          </p>
         </div>
       </div>
     </div>

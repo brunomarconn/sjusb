@@ -7,36 +7,36 @@ type Vista = 'login' | 'registro' | 'panel';
 
 export default function MiCuenta() {
   const [vista, setVista] = useState<Vista>('login');
-  const [clienteId, setClienteId] = useState<string | null>(null);
+  const [clienteEmail, setClienteEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const clienteGuardado = localStorage.getItem('mservicios_cliente_id');
-    if (clienteGuardado) {
-      setClienteId(clienteGuardado);
+    const emailGuardado = localStorage.getItem('mservicios_cliente_email');
+    if (emailGuardado) {
+      setClienteEmail(emailGuardado);
       setVista('panel');
     }
   }, []);
 
-  const handleLoginExitoso = (id: string) => {
-    localStorage.setItem('mservicios_cliente_id', id);
-    setClienteId(id);
+  const handleLoginExitoso = (email: string) => {
+    localStorage.setItem('mservicios_cliente_email', email);
+    setClienteEmail(email);
     setVista('panel');
   };
 
-  const handleRegistroExitoso = (id: string) => {
-    localStorage.setItem('mservicios_cliente_id', id);
-    setClienteId(id);
+  const handleRegistroExitoso = (email: string) => {
+    localStorage.setItem('mservicios_cliente_email', email);
+    setClienteEmail(email);
     setVista('panel');
   };
 
   const handleCerrarSesion = () => {
-    localStorage.removeItem('mservicios_cliente_id');
-    setClienteId(null);
+    localStorage.removeItem('mservicios_cliente_email');
+    setClienteEmail(null);
     setVista('login');
   };
 
-  if (vista === 'panel' && clienteId) {
-    return <PanelUsuario clienteId={clienteId} onCerrarSesion={handleCerrarSesion} />;
+  if (vista === 'panel' && clienteEmail) {
+    return <PanelUsuario clienteEmail={clienteEmail} onCerrarSesion={handleCerrarSesion} />;
   }
 
   if (vista === 'registro') {
