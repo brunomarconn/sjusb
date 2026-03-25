@@ -40,7 +40,8 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit --project tsconfig.app.json",
     "predeploy": "set BASE_PATH=/sjusb/&& npm run build",
-    "deploy": "gh-pages -d out"
+    "deploy": "gh-pages -d out",
+    "build:cloudflare": "vite build"
   },
   "type": "module",
   "version": "0.0.0"
