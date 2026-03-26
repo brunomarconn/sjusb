@@ -239,11 +239,11 @@ export default function Inicio() {
           >
             <img
               src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-              alt="MServicios Logo"
+              alt="MRServicios Logo"
               className="w-10 h-10 object-contain"
             />
             <span className="text-xs font-bold text-[#e2b040] leading-tight mt-0.5">
-              MServicios
+              MRServicios
             </span>
           </div>
 
@@ -424,7 +424,7 @@ export default function Inicio() {
           <div className="relative rounded-3xl overflow-hidden border border-[#e2b040]/20 shadow-2xl shadow-[#e2b040]/10">
             <img
               src="https://readdy.ai/api/search-image?query=diverse%20team%20of%20professional%20service%20workers%20plumber%20electrician%20painter%20gardener%20standing%20together%20smiling%20confident%20uniforms%20tools%20dark%20studio%20background%20warm%20golden%20accent%20lighting%20professional%20corporate%20photography&width=1200&height=480&seq=como_funciona_team_v2&orientation=landscape"
-              alt="Equipo de profesionales MServicios"
+              alt="Equipo de profesionales MRServicios"
               className="w-full object-cover object-top"
               style={{ maxHeight: '380px' }}
             />
@@ -458,7 +458,7 @@ export default function Inicio() {
               <div className="rounded-3xl overflow-hidden border border-[#e2b040]/30 shadow-2xl shadow-[#e2b040]/10">
                 <img
                   src="https://readdy.ai/api/search-image?query=professional%20service%20worker%20in%20uniform%20shaking%20hands%20with%20satisfied%20homeowner%20at%20front%20door%20successful%20job%20completion%20trust%20agreement%20warm%20natural%20light%20residential%20setting%20confident%20smiling%20both%20people&width=700&height=500&seq=quienes_somos_acuerdo_01&orientation=landscape"
-                  alt="Profesional y cliente MServicios"
+                  alt="Profesional y cliente MRServicios"
                   className="w-full h-full object-cover object-top"
                   style={{ minHeight: '380px' }}
                 />
@@ -514,10 +514,10 @@ export default function Inicio() {
               <div className="flex items-center gap-3 mb-4">
                 <img
                   src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-                  alt="MServicios Logo"
+                  alt="MRServicios Logo"
                   className="w-10 h-10 object-contain"
                 />
-                <span className="text-xl font-bold text-[#e2b040]">MServicios</span>
+                <span className="text-xl font-bold text-[#e2b040]">MRServicios</span>
               </div>
               <p className="text-gray-400 text-sm leading-relaxed mb-5">
                 Servicios profesionales con garantía
@@ -589,7 +589,7 @@ export default function Inicio() {
 
           <div className="border-t border-[#e2b040]/10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-gray-500 text-sm">
-              © 2025 MServicios. Todos los derechos reservados.
+              © 2025 MRServicios. Todos los derechos reservados.
             </p>
           </div>
         </div>
