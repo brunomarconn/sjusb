@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface LoginUsuarioProps {
-  onLoginExitoso: (clienteEmail: string) => void;
+  onLoginExitoso: (dni: string) => void;
   onCambiarARegistro: () => void;
 }
 
@@ -11,7 +11,7 @@ const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
 
 export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: LoginUsuarioProps) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [dni, setDni] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password.trim()) {
+    if (!dni.trim() || !password.trim()) {
       setError('Completá todos los campos');
       return;
     }
@@ -41,14 +41,14 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
     try {
       const { data, error: err } = await supabase
         .from('clientes')
-        .select('email, password, puntos, tiene_promocion')
-        .eq('email', email.trim().toLowerCase())
+        .select('dni, password, puntos, tiene_promocion')
+        .eq('dni', dni.trim())
         .maybeSingle();
 
       if (err) throw err;
 
       if (!data) {
-        setError('Email no registrado. ¿Querés crear una cuenta?');
+        setError('DNI no registrado. ¿Querés crear una cuenta?');
         setCargando(false);
         return;
       }
@@ -59,7 +59,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
         return;
       }
 
-      onLoginExitoso(data.email);
+      onLoginExitoso(data.dni);
     } catch (e) {
       console.error('Error al iniciar sesión:', e);
       setError('Error al iniciar sesión. Intentá nuevamente.');
@@ -85,7 +85,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
               <i className="ri-user-line text-2xl text-[#1a1a2e]"></i>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-400 text-sm">Ingresá con tu email y contraseña</p>
+            <p className="text-gray-400 text-sm">Ingresá con tu DNI y contraseña</p>
           </div>
 
           {error && (
@@ -97,13 +97,13 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">DNI</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={dni}
+                onChange={(e) => setDni(e.target.value)}
                 className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="tu@email.com"
+                placeholder="Tu número de DNI"
                 required
               />
             </div>

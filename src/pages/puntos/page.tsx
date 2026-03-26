@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 interface Cliente {
-  email: string;
+  dni: string;
   puntos: number;
   tiene_promocion: boolean;
 }
@@ -13,10 +13,10 @@ export default function Puntos() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  const clienteEmail = localStorage.getItem('mservicios_cliente_email');
+  const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
   useEffect(() => {
-    if (!clienteEmail) {
+    if (!clienteDni) {
       navigate('/mi-cuenta');
       return;
     }
@@ -24,24 +24,23 @@ export default function Puntos() {
   }, []);
 
   const cargarDatos = async () => {
-    if (!clienteEmail) return;
+    if (!clienteDni) return;
     setCargando(true);
     try {
       const { data } = await supabase
         .from('clientes')
-        .select('email, puntos, tiene_promocion')
-        .eq('email', clienteEmail)
+        .select('dni, puntos, tiene_promocion')
+        .eq('dni', clienteDni)
         .maybeSingle();
       if (data) setCliente(data);
     } catch (_) {
-      // fallback
-      setCliente({ email: clienteEmail, puntos: 0, tiene_promocion: false });
+      setCliente({ dni: clienteDni, puntos: 0, tiene_promocion: false });
     } finally {
       setCargando(false);
     }
   };
 
-  const puntosParaPromo = 10;
+  const puntosParaPromo = 5;
 
   if (cargando) {
     return (
@@ -106,17 +105,17 @@ export default function Puntos() {
               <h1 className="text-3xl font-bold text-[#1a1a2e] mb-2">¡Felicitaciones!</h1>
               <p className="text-[#1a1a2e]/80 text-lg mb-4">Tenés un descuento disponible</p>
               <div className="bg-[#1a1a2e]/15 rounded-2xl p-6 inline-block">
-                <span className="text-6xl font-black text-[#1a1a2e]">20%</span>
+                <span className="text-6xl font-black text-[#1a1a2e]">10%</span>
                 <p className="text-[#1a1a2e] font-bold text-lg mt-1">OFF en tu próximo servicio</p>
               </div>
               <p className="text-[#1a1a2e]/70 text-sm mt-4">
-                Mencionalo al contratar con cualquier prestador de MServicios
+                Al próximo contacto por WhatsApp se solicitará el canje automáticamente y tus puntos se reinician.
               </p>
             </>
           ) : (
             <>
               <h1 className="text-3xl font-bold text-white mb-2">Mis Puntos</h1>
-              <p className="text-gray-400 mb-6">Seguí contactando prestadores para acumular</p>
+              <p className="text-gray-400 mb-6">Los puntos se cargan tras cada trabajo finalizado</p>
               <div className="flex items-baseline justify-center gap-2 mb-2">
                 <span className="text-7xl font-black text-[#e2b040]">{puntos}</span>
                 <span className="text-gray-400 text-xl">/ {puntosParaPromo}</span>
@@ -131,7 +130,7 @@ export default function Puntos() {
                 ></div>
               </div>
               <p className="text-[#e2b040] text-sm">
-                Te faltan <strong>{puntosParaPromo - puntos}</strong> {puntosParaPromo - puntos === 1 ? 'contacto' : 'contactos'} para tu 20% de descuento
+                Te faltan <strong>{puntosParaPromo - puntos}</strong> {puntosParaPromo - puntos === 1 ? 'punto' : 'puntos'} para tu 10% de descuento
               </p>
             </>
           )}
@@ -148,30 +147,30 @@ export default function Puntos() {
             {[
               {
                 num: '1',
-                icon: 'ri-whatsapp-line',
-                title: 'Contactá un prestador',
-                desc: 'Hacé clic en "Contactar por WhatsApp" en la página de prestadores',
+                icon: 'ri-tools-line',
+                title: 'Contratás un servicio',
+                desc: 'Contactás un prestador por WhatsApp y completás el trabajo',
                 color: 'bg-green-500/20 text-green-400'
               },
               {
                 num: '2',
                 icon: 'ri-add-circle-line',
-                title: 'Acumulás 1 punto',
-                desc: 'Cada contacto te suma automáticamente 1 punto a tu cuenta',
+                title: 'Nuestro equipo te carga 1 punto',
+                desc: 'Una vez finalizado el trabajo, te sumamos 1 punto a tu cuenta',
                 color: 'bg-[#e2b040]/20 text-[#e2b040]'
               },
               {
                 num: '3',
                 icon: 'ri-gift-2-line',
-                title: '10 puntos = 20% de descuento',
-                desc: 'Al llegar a 10 puntos desbloqueás un 20% de descuento en tu próximo servicio',
+                title: '5 puntos = 10% de descuento',
+                desc: 'Al llegar a 5 puntos desbloqueás un 10% de descuento en tu próximo servicio',
                 color: 'bg-purple-500/20 text-purple-400'
               },
               {
                 num: '4',
                 icon: 'ri-coupon-line',
-                title: 'Usá tu descuento',
-                desc: 'Mostrá esta página al prestador al momento de contratar el servicio',
+                title: 'Canje automático',
+                desc: 'Al próximo contacto por WhatsApp el descuento se solicita automáticamente y los puntos se reinician',
                 color: 'bg-blue-500/20 text-blue-400'
               },
             ].map((step) => (
@@ -196,7 +195,7 @@ export default function Puntos() {
             </div>
             <div>
               <p className="text-gray-400 text-xs">Cuenta</p>
-              <p className="text-white font-medium text-sm">{cliente?.email}</p>
+              <p className="text-white font-medium text-sm">DNI: {cliente?.dni}</p>
             </div>
           </div>
         </div>
@@ -207,7 +206,7 @@ export default function Puntos() {
           className="w-full py-4 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-2xl font-bold text-lg hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
         >
           <i className="ri-search-line text-xl"></i>
-          {tienePromo ? 'Ir a contactar un prestador' : 'Seguir acumulando puntos'}
+          {tienePromo ? 'Ir a contactar un prestador' : 'Ver prestadores'}
         </button>
       </div>
     </div>

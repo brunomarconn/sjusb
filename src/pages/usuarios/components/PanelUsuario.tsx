@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface Cliente {
-  email: string;
+  dni: string;
   puntos: number;
   tiene_promocion: boolean;
 }
 
 interface PanelUsuarioProps {
-  clienteEmail: string;
+  clienteDni: string;
   onCerrarSesion: () => void;
 }
 
-export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsuarioProps) {
+export default function PanelUsuario({ clienteDni, onCerrarSesion }: PanelUsuarioProps) {
   const navigate = useNavigate();
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -21,7 +21,7 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
 
   useEffect(() => {
     cargarDatosCliente();
-  }, [clienteEmail]);
+  }, [clienteDni]);
 
   const cargarDatosCliente = async () => {
     setCargando(true);
@@ -29,8 +29,8 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
     try {
       const { data, error: err } = await supabase
         .from('clientes')
-        .select('email, puntos, tiene_promocion')
-        .eq('email', clienteEmail)
+        .select('dni, puntos, tiene_promocion')
+        .eq('dni', clienteDni)
         .single();
 
       if (err) throw err;
@@ -77,7 +77,7 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
     );
   }
 
-  const puntosParaPromo = 10;
+  const puntosParaPromo = 5;
   const progreso = Math.min((cliente.puntos / puntosParaPromo) * 100, 100);
 
   return (
@@ -116,7 +116,7 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
         {/* Welcome */}
         <div className="bg-gradient-to-r from-[#e2b040] to-[#f0d080] rounded-2xl p-8 mb-8 text-[#1a1a2e]">
           <h1 className="text-3xl font-bold mb-1">¡Bienvenido!</h1>
-          <p className="text-[#1a1a2e]/70 text-sm mb-3">{cliente.email}</p>
+          <p className="text-[#1a1a2e]/70 text-sm mb-3">DNI: {cliente.dni}</p>
           <p className="text-lg font-medium">Explorá nuestros prestadores y acumulá puntos</p>
         </div>
 
@@ -125,7 +125,7 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">Tus Puntos</h2>
-              <p className="text-gray-400 text-sm">1 punto por cada contacto vía WhatsApp</p>
+              <p className="text-gray-400 text-sm">Los puntos se cargan tras cada trabajo finalizado</p>
             </div>
             <div className="w-16 h-16 bg-[#e2b040]/20 rounded-full flex items-center justify-center">
               <i className="ri-medal-line text-[#e2b040] text-3xl"></i>
@@ -146,8 +146,8 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
           </div>
           <p className="text-gray-500 text-xs">
             {cliente.puntos < puntosParaPromo
-              ? `Te faltan ${puntosParaPromo - cliente.puntos} contactos para obtener el 20% de descuento`
-              : '¡Llegaste a 10 contactos! Tenés tu 20% de descuento disponible'}
+              ? `Te faltan ${puntosParaPromo - cliente.puntos} puntos para obtener el 10% de descuento`
+              : '¡Llegaste a 5 puntos! En tu próximo contacto se canjeará automáticamente el 10% de descuento'}
           </p>
 
           {(cliente.tiene_promocion || cliente.puntos >= puntosParaPromo) && (
@@ -156,8 +156,8 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
                 <i className="ri-gift-2-line text-green-400 text-2xl"></i>
               </div>
               <div>
-                <p className="text-green-400 font-bold text-lg">¡20% de descuento disponible!</p>
-                <p className="text-gray-400 text-sm">Presentalo al contratar un servicio. ¡Ya lo ganaste!</p>
+                <p className="text-green-400 font-bold text-lg">¡10% de descuento disponible!</p>
+                <p className="text-gray-400 text-sm">Al próximo contacto por WhatsApp se solicitará el canje automáticamente.</p>
               </div>
             </div>
           )}
@@ -169,15 +169,15 @@ export default function PanelUsuario({ clienteEmail, onCerrarSesion }: PanelUsua
           <div className="space-y-3 text-gray-400 text-sm">
             <p className="flex items-start gap-3">
               <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
-              <span>Cada vez que contactás un prestador por WhatsApp acumulás <strong className="text-white">1 punto</strong></span>
+              <span>Nuestro equipo te carga <strong className="text-white">1 punto</strong> por cada trabajo finalizado con un prestador</span>
             </p>
             <p className="flex items-start gap-3">
               <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
-              <span>Al llegar a <strong className="text-white">10 puntos</strong> desbloqueás un <strong className="text-[#e2b040]">20% de descuento</strong> en tu próximo servicio</span>
+              <span>Al llegar a <strong className="text-white">5 puntos</strong> desbloqueás un <strong className="text-[#e2b040]">10% de descuento</strong> en tu próximo servicio</span>
             </p>
             <p className="flex items-start gap-3">
               <i className="ri-checkbox-circle-fill text-[#e2b040] mt-0.5 shrink-0"></i>
-              <span>El descuento se aplica directamente con el prestador al momento de contratar</span>
+              <span>El descuento se solicita automáticamente al contactar por WhatsApp y tus puntos se reinician</span>
             </p>
           </div>
         </div>

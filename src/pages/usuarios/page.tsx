@@ -34,8 +34,34 @@ const categorias = [
   'mantenimiento aire acondicionado', 'impermeabilizador hogar',
   'alquiler vajilla', 'pastelería', 'cambio de baterías',
   'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular',
+  'maestro particular', 'servicios de catering',
 ];
+
+// Números de WhatsApp de MServicios (round-robin)
+const NUMEROS_WA = ['3516576801', '3513227999', '3512178797'];
+const WA_INDEX_KEY = 'mservicios_wa_index';
+// IDs de prestadores contactados (para validar valoraciones)
+const CONTACTADOS_KEY = 'mservicios_contactados';
+
+function getSiguienteNumeroWA(): string {
+  const idx = parseInt(localStorage.getItem(WA_INDEX_KEY) || '0', 10);
+  const numero = NUMEROS_WA[idx % NUMEROS_WA.length];
+  localStorage.setItem(WA_INDEX_KEY, String((idx + 1) % NUMEROS_WA.length));
+  return numero;
+}
+
+function marcarContactado(prestadorId: string) {
+  const contactados: string[] = JSON.parse(localStorage.getItem(CONTACTADOS_KEY) || '[]');
+  if (!contactados.includes(prestadorId)) {
+    contactados.push(prestadorId);
+    localStorage.setItem(CONTACTADOS_KEY, JSON.stringify(contactados));
+  }
+}
+
+function yaContacto(prestadorId: string): boolean {
+  const contactados: string[] = JSON.parse(localStorage.getItem(CONTACTADOS_KEY) || '[]');
+  return contactados.includes(prestadorId);
+}
 
 export default function Usuarios() {
   const navigate = useNavigate();
@@ -58,20 +84,20 @@ export default function Usuarios() {
   const [mostrarValoraciones, setMostrarValoraciones] = useState<string | null>(null);
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
 
-  const clienteEmail = localStorage.getItem('mservicios_cliente_email');
+  const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
   useEffect(() => {
     cargarPrestadores();
-    if (clienteEmail) cargarPuntosUsuario();
+    if (clienteDni) cargarPuntosUsuario();
   }, []);
 
   const cargarPuntosUsuario = async () => {
-    if (!clienteEmail) return;
+    if (!clienteDni) return;
     try {
       const { data } = await supabase
         .from('clientes')
         .select('puntos')
-        .eq('email', clienteEmail)
+        .eq('dni', clienteDni)
         .maybeSingle();
       if (data) setPuntosUsuario(data.puntos);
     } catch (_) {}
@@ -121,54 +147,48 @@ export default function Usuarios() {
       };
     });
 
-  const agregarPunto = async () => {
-    if (!clienteEmail) return;
-    try {
-      const { data } = await supabase
-        .from('clientes')
-        .select('puntos, tiene_promocion')
-        .eq('email', clienteEmail)
-        .maybeSingle();
+  const handleContactar = async (prestador: Prestador) => {
+    // Registrar contacto para permitir valoración
+    marcarContactado(prestador.id);
 
-      if (data) {
-        const nuevosPuntos = data.puntos + 1;
-        const nuevaPromo = nuevosPuntos >= 10;
+    // Construir mensaje
+    let mensaje = `Hola! Me contacto desde *MServicios*. Me interesa el servicio de *${prestador.categoria}* del prestador *${prestador.nombre} ${prestador.apellido}*. ¿Me pueden dar más información?`;
+
+    // Si el usuario tiene 5+ puntos, solicitar canjeo automáticamente
+    if (clienteDni && puntosUsuario !== null && puntosUsuario >= 5) {
+      mensaje += ` Además, quiero canjear mis puntos para obtener el *10% de descuento*.`;
+
+      // Resetear puntos en la base de datos
+      try {
         await supabase
           .from('clientes')
-          .update({ puntos: nuevosPuntos, tiene_promocion: nuevaPromo })
-          .eq('email', clienteEmail);
-        setPuntosUsuario(nuevosPuntos);
-      }
-    } catch (_) {}
-  };
+          .update({ puntos: 0, tiene_promocion: false })
+          .eq('dni', clienteDni);
+        setPuntosUsuario(0);
+      } catch (_) {}
 
-  const handleContactar = async (prestador: Prestador) => {
-    // Add point if logged in
-    if (clienteEmail) {
-      await agregarPunto();
-      const nuevosPuntos = (puntosUsuario ?? 0) + 1;
-      if (nuevosPuntos === 10) {
-        setMensajeExito('🎉 ¡Llegaste a 10 puntos! Tenés un 20% de descuento disponible.');
-      } else {
-        setMensajeExito(`✓ Punto acumulado. Tenés ${nuevosPuntos} punto${nuevosPuntos !== 1 ? 's' : ''}.`);
-      }
-      setTimeout(() => setMensajeExito(''), 4000);
+      setMensajeExito('🎉 ¡Puntos canjeados! Tu solicitud de 10% de descuento se envió al equipo.');
+      setTimeout(() => setMensajeExito(''), 5000);
     }
 
-    const telefono = prestador.telefono
-      ? `549${prestador.telefono.replace(/\D/g, '').replace(/^549/, '').replace(/^54/, '')}`
-      : '5491100000000';
-    const mensaje = `Hola ${prestador.nombre}, te contacto desde MServicios. Me interesa tu servicio de *${prestador.categoria}*. ¿Podés darme más información?`;
-    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+    // Round-robin entre nuestros números
+    const numero = getSiguienteNumeroWA();
+    window.open(`https://wa.me/549${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
   const handleValorar = (prestador: Prestador) => {
-    if (!clienteEmail) {
+    if (!clienteDni) {
       if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) {
         navigate('/mi-cuenta');
       }
       return;
     }
+
+    if (!yaContacto(prestador.id)) {
+      alert('Solo podés valorar a un prestador con quien hayas tenido contacto. Primero contactalo por WhatsApp.');
+      return;
+    }
+
     setPrestadorSeleccionado(prestador);
     setMostrarModalValoracion(true);
     setPuntuacion(5);
@@ -185,7 +205,7 @@ export default function Usuarios() {
         .from('valoraciones')
         .insert([{
           prestador_id: prestadorSeleccionado.id,
-          cliente_email: clienteEmail || 'anonimo@mservicios.com',
+          cliente_email: clienteDni || 'anonimo',
           nombre_cliente: nombreCliente.trim(),
           puntuacion,
           comentario: comentario.trim()
@@ -196,7 +216,7 @@ export default function Usuarios() {
       const nuevaValoracion: Valoracion = {
         id: Date.now().toString(),
         prestador_id: prestadorSeleccionado.id,
-        cliente_email: clienteEmail || '',
+        cliente_email: clienteDni || '',
         nombre_cliente: nombreCliente.trim(),
         puntuacion,
         comentario: comentario.trim(),
@@ -266,7 +286,7 @@ export default function Usuarios() {
           </div>
 
           <div className="flex items-center gap-2">
-            {clienteEmail ? (
+            {clienteDni ? (
               <>
                 <button
                   onClick={() => navigate('/puntos')}
@@ -315,8 +335,8 @@ export default function Usuarios() {
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Encontrá tu profesional</h1>
-          <p className="text-gray-400 text-lg">Buscá entre nuestros prestadores y contactalos directamente por WhatsApp</p>
-          {!clienteEmail && (
+          <p className="text-gray-400 text-lg">Buscá entre nuestros prestadores y contactalos por WhatsApp</p>
+          {!clienteDni && (
             <p className="text-[#e2b040] text-sm mt-2">
               <i className="ri-information-line mr-1"></i>
               <button onClick={() => navigate('/mi-cuenta')} className="underline cursor-pointer hover:text-[#f0d080]">
@@ -324,6 +344,12 @@ export default function Usuarios() {
               </button>{' '}
               para acumular puntos y obtener descuentos
             </p>
+          )}
+          {clienteDni && puntosUsuario !== null && puntosUsuario >= 5 && (
+            <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-full text-green-400 text-sm font-semibold">
+              <i className="ri-gift-2-line"></i>
+              ¡Tenés 10% de descuento disponible! Al próximo contacto se canjea automáticamente.
+            </div>
           )}
         </div>
 
@@ -395,6 +421,7 @@ export default function Usuarios() {
                 const vals = prestador.valoraciones || [];
                 const promedio = calcularPromedio(vals);
                 const expandido = mostrarValoraciones === prestador.id;
+                const puedeValorar = clienteDni && yaContacto(prestador.id);
 
                 return (
                   <div key={prestador.id}
@@ -446,16 +473,21 @@ export default function Usuarios() {
                         >
                           <i className="ri-whatsapp-line text-lg"></i>
                           Contactar por WhatsApp
-                          {clienteEmail && <span className="text-xs bg-green-800/50 px-2 py-0.5 rounded-full">+1 pto</span>}
                         </button>
 
                         {/* Rate button */}
                         <button
                           onClick={() => handleValorar(prestador)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#e2b040]/10 border border-[#e2b040]/30 text-[#e2b040] rounded-xl text-sm font-medium hover:bg-[#e2b040]/20 transition-all cursor-pointer whitespace-nowrap"
+                          disabled={!puedeValorar}
+                          title={!clienteDni ? 'Iniciá sesión para valorar' : !puedeValorar ? 'Solo podés valorar prestadores que hayas contactado' : ''}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                            puedeValorar
+                              ? 'bg-[#e2b040]/10 border border-[#e2b040]/30 text-[#e2b040] hover:bg-[#e2b040]/20 cursor-pointer'
+                              : 'bg-gray-800/50 border border-gray-700/30 text-gray-600 cursor-not-allowed'
+                          }`}
                         >
                           <i className="ri-star-line"></i>
-                          Dejar Valoración
+                          {puedeValorar ? 'Dejar Valoración' : 'Contactá primero para valorar'}
                         </button>
 
                         {/* Show reviews toggle */}

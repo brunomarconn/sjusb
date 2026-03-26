@@ -156,6 +156,13 @@ const servicios = [
     imagen:
       'https://readdy.ai/api/search-image?query=professional%20carpenter%20woodworking%20workshop%20crafting%20furniture%20wood%20tools%20sawdust%20warm%20light%20close%20up%20hands%20working&width=400&height=260&seq=serv22&orientation=landscape',
   },
+  {
+    nombre: 'Servicios de Catering',
+    categoria: 'servicios de catering',
+    icono: 'ri-restaurant-2-line',
+    imagen:
+      'https://media.discordapp.net/attachments/1486195971116503110/1486564093354573944/content.png?ex=69c5f632&is=69c4a4b2&hm=faa3f8e45399dffa5bf4c70bc4598252246c535f7e9b800283c1043448a7ef34&=&format=webp&quality=lossless&width=1240&height=826',
+  },
 ];
 
 const pasos = [
@@ -318,7 +325,7 @@ export default function Inicio() {
           {/* Points banner */}
           <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-full text-sm text-[#f0d080] mb-4">
             <i className="ri-medal-line text-[#e2b040]"></i>
-            <span>Acumulá puntos y obtené un <strong>20% de descuento</strong> en tus servicios</span>
+            <span>Acumulá puntos y obtené un <strong>10% de descuento</strong> en tus servicios</span>
           </div>
 
           {/* Scroll indicator */}
@@ -566,6 +573,12 @@ export default function Inicio() {
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                    <i className="ri-phone-line text-[#e2b040] text-base"></i>
+                  </div>
+                  <a href="tel:+543512178797" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">351 217-8797</a>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-8 h-8 flex items-center justify-center shrink-0">
                     <i className="ri-map-pin-line text-[#e2b040] text-base"></i>
                   </div>
                   <span className="text-gray-400 text-sm">Villa Allende, Córdoba, Argentina</span>
@@ -576,10 +589,7 @@ export default function Inicio() {
 
           <div className="border-t border-[#e2b040]/10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-gray-500 text-sm">
-              © 2025 MServicios. Todos los derechos reservados.{' '}
-              <a href="https://readdy.ai/?ref=logo" target="_blank" rel="noopener noreferrer" className="text-[#e2b040] hover:text-[#f0d080] transition-colors cursor-pointer">
-                Powered by Readdy
-              </a>
+              © 2025 MServicios. Todos los derechos reservados.
             </p>
           </div>
         </div>

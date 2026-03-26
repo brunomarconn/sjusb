@@ -15,7 +15,7 @@ const categorias = [
   'mantenimiento aire acondicionado', 'impermeabilizador hogar',
   'alquiler vajilla', 'pastelería', 'cambio de baterías',
   'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular'
+  'maestro particular', 'servicios de catering'
 ];
 
 export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: RegistroPrestadorProps) {
@@ -147,14 +147,16 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex items-center justify-center p-4">
       <div className="bg-[#16213e]/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-2xl border border-[#e2b040]/20 my-8">
 
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-400 hover:text-[#e2b040] transition-colors mb-6 cursor-pointer"
-        >
-          <i className="ri-arrow-left-line"></i>
-          <span className="text-sm">Volver al inicio</span>
-        </button>
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-gray-400 hover:text-[#e2b040] transition-colors cursor-pointer"
+          >
+            <i className="ri-arrow-left-line"></i>
+            <span className="text-sm">Volver al inicio</span>
+          </button>
+        </div>
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-xl mb-4">

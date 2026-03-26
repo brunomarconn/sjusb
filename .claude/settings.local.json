@@ -13,7 +13,8 @@
       "Bash(command -v npm)",
       "Bash(npm run:*)",
       "Bash(where npm.cmd)",
-      "Read(//c/Program Files/nodejs//**)"
+      "Read(//c/Program Files/nodejs//**)",
+      "Bash(ls C:/Users/franc/OneDrive/Documentos/servicios/wrangler*)"
     ]
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, type Prestador, type Valoracion } from '../../../lib/supabase';
 
 interface PanelPrestadorProps {
@@ -25,10 +26,12 @@ const categorias = [
   'limpieza de tapizados',
   'personal trainer',
   'adiestrador de perros',
-  'maestro particular'
+  'maestro particular',
+  'servicios de catering'
 ];
 
 export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelPrestadorProps) {
+  const navigate = useNavigate();
   const [prestador, setPrestador] = useState<Prestador | null>(null);
   const [valoraciones, setValoraciones] = useState<Valoracion[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -187,13 +190,22 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
             <span className="text-2xl font-bold text-white">MServicios</span>
           </div>
 
-          <button
-            onClick={onCerrarSesion}
-            className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors whitespace-nowrap cursor-pointer"
-          >
-            <i className="ri-logout-box-line mr-2"></i>
-            Cerrar Sesión
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-2 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <i className="ri-home-line mr-2"></i>
+              Inicio
+            </button>
+            <button
+              onClick={onCerrarSesion}
+              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <i className="ri-logout-box-line mr-2"></i>
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       </header>
 

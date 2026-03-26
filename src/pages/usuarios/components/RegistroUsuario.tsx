@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface RegistroUsuarioProps {
-  onRegistroExitoso: (clienteEmail: string) => void;
+  onRegistroExitoso: (dni: string) => void;
   onCambiarALogin: () => void;
 }
 
@@ -11,6 +11,7 @@ const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
 
 export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: RegistroUsuarioProps) {
   const navigate = useNavigate();
+  const [dni, setDni] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -22,8 +23,13 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password.trim() || !confirmar.trim()) {
-      setError('Completá todos los campos');
+    if (!dni.trim() || !password.trim() || !confirmar.trim()) {
+      setError('Completá todos los campos obligatorios');
+      return;
+    }
+
+    if (!/^\d{7,8}$/.test(dni.trim())) {
+      setError('El DNI debe tener 7 u 8 dígitos numéricos');
       return;
     }
 
@@ -47,12 +53,12 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
     try {
       const { data: existente } = await supabase
         .from('clientes')
-        .select('email')
-        .eq('email', email.trim().toLowerCase())
+        .select('dni')
+        .eq('dni', dni.trim())
         .maybeSingle();
 
       if (existente) {
-        setError('Este email ya está registrado. Iniciá sesión.');
+        setError('Este DNI ya está registrado. Iniciá sesión.');
         setCargando(false);
         return;
       }
@@ -60,7 +66,8 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
       const { error: insertError } = await supabase
         .from('clientes')
         .insert([{
-          email: email.trim().toLowerCase(),
+          dni: dni.trim(),
+          email: email.trim().toLowerCase() || null,
           password,
           puntos: 0,
           tiene_promocion: false,
@@ -68,7 +75,7 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
 
       if (insertError) throw insertError;
 
-      onRegistroExitoso(email.trim().toLowerCase());
+      onRegistroExitoso(dni.trim());
     } catch (e) {
       console.error('Error al registrar:', e);
       setError('Error al crear la cuenta. Intentá nuevamente.');
@@ -100,7 +107,7 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
           {/* Points info banner */}
           <div className="flex items-center gap-2 px-4 py-3 bg-[#e2b040]/10 border border-[#e2b040]/20 rounded-lg mb-6 text-sm text-[#f0d080]">
             <i className="ri-medal-line text-[#e2b040] text-base shrink-0"></i>
-            <span>Cada contacto suma 1 punto. ¡Con 10 puntos obtenés un 20% de descuento!</span>
+            <span>¡Con <strong>5 puntos</strong> obtenés un <strong>10% de descuento</strong> en servicios!</span>
           </div>
 
           {error && (
@@ -112,20 +119,36 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                DNI <span className="text-red-400">*</span>
+              </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={dni}
+                onChange={(e) => setDni(e.target.value)}
                 className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="tu@email.com"
+                placeholder="Tu número de DNI (7 u 8 dígitos)"
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Contraseña <span className="text-gray-500 text-xs">(mín. 5 caracteres, sin símbolos)</span>
+                Email <span className="text-gray-500 text-xs">(opcional, para recupero de cuenta)</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                placeholder="tu@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Contraseña <span className="text-red-400">*</span>{' '}
+                <span className="text-gray-500 text-xs">(mín. 5 caracteres, sin símbolos)</span>
               </label>
               <div className="relative">
                 <input
@@ -147,7 +170,9 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Confirmar contraseña</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Confirmar contraseña <span className="text-red-400">*</span>
+              </label>
               <input
                 type={mostrarPassword ? 'text' : 'password'}
                 value={confirmar}
