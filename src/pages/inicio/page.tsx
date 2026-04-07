@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
+const clienteDni  = () => localStorage.getItem('mservicios_cliente_dni');
+const prestadorId = () => localStorage.getItem('mservicios_prestador_id');
+
 const servicios = [
   {
     nombre: 'Electricista',
@@ -255,6 +258,15 @@ export default function Inicio() {
             >
               Quiénes Somos
             </button>
+            {(clienteDni() || prestadorId()) && (
+              <button
+                onClick={() => navigate('/chat')}
+                className="px-3 py-1.5 bg-transparent border border-white/20 text-gray-300 rounded-full text-xs font-semibold hover:border-[#e2b040] hover:text-[#e2b040] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+              >
+                <i className="ri-chat-3-line text-xs"></i>
+                Mensajes
+              </button>
+            )}
             <button
               onClick={() => navigate('/mi-cuenta')}
               className="px-3 py-1.5 bg-transparent border border-[#e2b040] text-[#e2b040] rounded-full text-xs font-semibold hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"

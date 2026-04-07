@@ -16,12 +16,14 @@ export default function PrestadoresPage() {
   }, []);
 
   const handleLoginExitoso = (dni: string) => {
+    localStorage.removeItem('mservicios_cliente_dni');
     localStorage.setItem('dniPrestador', dni);
     setPrestadorLogueado({ dni });
     setVista('panel');
   };
 
   const handleRegistroExitoso = (dni: string) => {
+    localStorage.removeItem('mservicios_cliente_dni');
     localStorage.setItem('dniPrestador', dni);
     setPrestadorLogueado({ dni });
     setVista('panel');
@@ -29,6 +31,7 @@ export default function PrestadoresPage() {
 
   const handleCerrarSesion = () => {
     localStorage.removeItem('dniPrestador');
+    localStorage.removeItem('mservicios_prestador_id');
     setPrestadorLogueado(null);
     setVista('login');
   };

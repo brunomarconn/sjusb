@@ -18,12 +18,16 @@ export default function MiCuenta() {
   }, []);
 
   const handleLoginExitoso = (dni: string) => {
+    localStorage.removeItem('dniPrestador');
+    localStorage.removeItem('mservicios_prestador_id');
     localStorage.setItem('mservicios_cliente_dni', dni);
     setClienteDni(dni);
     setVista('panel');
   };
 
   const handleRegistroExitoso = (dni: string) => {
+    localStorage.removeItem('dniPrestador');
+    localStorage.removeItem('mservicios_prestador_id');
     localStorage.setItem('mservicios_cliente_dni', dni);
     setClienteDni(dni);
     setVista('panel');

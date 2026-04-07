@@ -289,6 +289,13 @@ export default function Usuarios() {
             {clienteDni ? (
               <>
                 <button
+                  onClick={() => navigate('/chat')}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-transparent border border-white/20 text-gray-300 rounded-full text-sm font-semibold hover:border-[#e2b040] hover:text-[#e2b040] transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <i className="ri-chat-3-line"></i>
+                  Mensajes
+                </button>
+                <button
                   onClick={() => navigate('/puntos')}
                   className="flex items-center gap-1.5 px-4 py-2 bg-[#e2b040]/10 border border-[#e2b040]/40 text-[#e2b040] rounded-full text-sm font-semibold hover:bg-[#e2b040]/20 transition-all cursor-pointer whitespace-nowrap"
                 >
@@ -466,6 +473,20 @@ export default function Usuarios() {
 
                       {/* Action buttons */}
                       <div className="space-y-2">
+                        {/* Botón de mensajes (solo si hay sesión) */}
+                        {clienteDni && (
+                          <button
+                            onClick={() => {
+                              marcarContactado(prestador.id);
+                              navigate(`/chat?prestador=${prestador.id}`);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#e2b040] hover:bg-[#f0d080] text-[#1a1a2e] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                          >
+                            <i className="ri-chat-3-line text-lg"></i>
+                            Enviar mensaje
+                          </button>
+                        )}
+
                         {/* WhatsApp button */}
                         <button
                           onClick={() => handleContactar(prestador)}

@@ -64,6 +64,8 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
 
       if (prestadorInfo) {
         setPrestador(prestadorInfo);
+        // Guardar UUID para el sistema de chat
+        localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
         setFormData({
           nombre: prestadorInfo.nombre,
           apellido: prestadorInfo.apellido,
@@ -197,6 +199,13 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
             >
               <i className="ri-home-line mr-2"></i>
               Inicio
+            </button>
+            <button
+              onClick={() => navigate('/chat')}
+              className="px-4 py-2 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <i className="ri-chat-3-line mr-2"></i>
+              Mensajes
             </button>
             <button
               onClick={onCerrarSesion}
