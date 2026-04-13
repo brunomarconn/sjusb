@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-
-const clienteDni  = () => localStorage.getItem('mservicios_cliente_dni');
-const prestadorId = () => localStorage.getItem('mservicios_prestador_id');
+import AppHeader from '../../components/AppHeader';
 
 const servicios = [
   {
@@ -164,7 +162,7 @@ const servicios = [
     categoria: 'servicios de catering',
     icono: 'ri-restaurant-2-line',
     imagen:
-      'https://media.discordapp.net/attachments/1486195971116503110/1486564093354573944/content.png?ex=69c5f632&is=69c4a4b2&hm=faa3f8e45399dffa5bf4c70bc4598252246c535f7e9b800283c1043448a7ef34&=&format=webp&quality=lossless&width=1240&height=826',
+      'images/serviciosdecatering.png',
   },
 ];
 
@@ -206,7 +204,6 @@ const pasos = [
 export default function Inicio() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
-
   useEffect(() => {
     const handleScroll = () => {
       try {
@@ -227,63 +224,11 @@ export default function Inicio() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
       {/* Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-[#16213e]/95 backdrop-blur-sm shadow-lg'
-            : 'bg-transparent'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          {/* Logo + nombre */}
-          <div
-            className="flex flex-col items-center cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <img
-              src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-              alt="MRServicios Logo"
-              className="w-10 h-10 object-contain"
-            />
-            <span className="text-xs font-bold text-[#e2b040] leading-tight mt-0.5">
-              MRServicios
-            </span>
-          </div>
-
-          {/* Botones de sesión — arriba a la derecha */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => document.getElementById('quienes-somos')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-3 py-1.5 bg-transparent text-gray-300 rounded-full text-xs font-semibold hover:text-[#e2b040] transition-all duration-300 whitespace-nowrap cursor-pointer hidden sm:block"
-            >
-              Quiénes Somos
-            </button>
-            {(clienteDni() || prestadorId()) && (
-              <button
-                onClick={() => navigate('/chat')}
-                className="px-3 py-1.5 bg-transparent border border-white/20 text-gray-300 rounded-full text-xs font-semibold hover:border-[#e2b040] hover:text-[#e2b040] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
-              >
-                <i className="ri-chat-3-line text-xs"></i>
-                Mensajes
-              </button>
-            )}
-            <button
-              onClick={() => navigate('/mi-cuenta')}
-              className="px-3 py-1.5 bg-transparent border border-[#e2b040] text-[#e2b040] rounded-full text-xs font-semibold hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
-            >
-              <i className="ri-user-line text-xs"></i>
-              Soy Usuario
-            </button>
-            <button
-              onClick={() => navigate('/prestadores')}
-              className="px-3 py-1.5 bg-[#e2b040] text-[#1a1a2e] rounded-full text-xs font-semibold hover:bg-[#f0d080] transition-all duration-300 whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-[#e2b040]/30 cursor-pointer"
-            >
-              <i className="ri-briefcase-line text-xs"></i>
-              Soy Prestador
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        transparent
+        scrolled={scrolled}
+        onQuienesSomos={() => document.getElementById('quienes-somos')?.scrollIntoView({ behavior: 'smooth' })}
+      />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -569,7 +514,7 @@ export default function Inicio() {
                   <div className="w-8 h-8 flex items-center justify-center shrink-0">
                     <i className="ri-mail-line text-[#e2b040] text-base"></i>
                   </div>
-                  <a href="mailto:marconsoliservicios@gmail.com" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">marconsoliservicios@gmail.com</a>
+                  <a href="mailto:mrsserviciossoluciones@gmail.com" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">mrsserviciossoluciones@gmail.com</a>
                 </li>
                 <li className="flex items-center gap-3">
                   <div className="w-8 h-8 flex items-center justify-center shrink-0">

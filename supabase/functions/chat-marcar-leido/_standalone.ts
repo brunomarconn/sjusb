@@ -17,7 +17,7 @@ function ok(data: unknown, status = 200) {
 function err(message: string, status = 400, details?: unknown) {
   const body: Record<string, unknown> = { error: message };
   if (details !== undefined) body.details = details;
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  return new Response(JSON.string ify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 function getAdmin() {

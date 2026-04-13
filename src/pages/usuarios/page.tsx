@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
+import AppHeader from '../../components/AppHeader';
 
 interface Valoracion {
   id: string;
@@ -40,8 +41,8 @@ const categorias = [
 // Números de WhatsApp de MServicios (round-robin)
 const NUMEROS_WA = ['3516576801', '3513227999', '3512178797'];
 const WA_INDEX_KEY = 'mservicios_wa_index';
-// IDs de prestadores contactados (para validar valoraciones)
-const CONTACTADOS_KEY = 'mservicios_contactados';
+// IDs de prestadores con quienes se reservó (para validar valoraciones)
+const RESERVADOS_KEY = 'mservicios_reservados';
 
 function getSiguienteNumeroWA(): string {
   const idx = parseInt(localStorage.getItem(WA_INDEX_KEY) || '0', 10);
@@ -50,17 +51,27 @@ function getSiguienteNumeroWA(): string {
   return numero;
 }
 
-function marcarContactado(prestadorId: string) {
-  const contactados: string[] = JSON.parse(localStorage.getItem(CONTACTADOS_KEY) || '[]');
-  if (!contactados.includes(prestadorId)) {
-    contactados.push(prestadorId);
-    localStorage.setItem(CONTACTADOS_KEY, JSON.stringify(contactados));
+// Llamado desde la página de reserva cuando se completa la reserva
+export function marcarReservado(prestadorId: string) {
+  const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
+  if (!reservados.includes(prestadorId)) {
+    reservados.push(prestadorId);
+    localStorage.setItem(RESERVADOS_KEY, JSON.stringify(reservados));
   }
 }
 
-function yaContacto(prestadorId: string): boolean {
-  const contactados: string[] = JSON.parse(localStorage.getItem(CONTACTADOS_KEY) || '[]');
-  return contactados.includes(prestadorId);
+function yaReservo(prestadorId: string): boolean {
+  const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
+  return reservados.includes(prestadorId);
+}
+
+function marcarContactado(prestadorId: string) {
+  const key = 'mservicios_contactados';
+  const contactados: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+  if (!contactados.includes(prestadorId)) {
+    contactados.push(prestadorId);
+    localStorage.setItem(key, JSON.stringify(contactados));
+  }
 }
 
 export default function Usuarios() {
@@ -83,6 +94,10 @@ export default function Usuarios() {
   const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarValoraciones, setMostrarValoraciones] = useState<string | null>(null);
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
+
+  // Modal: mensaje sin cuenta
+  const [mostrarModalMensaje, setMostrarModalMensaje] = useState(false);
+  const [prestadorPendienteMensaje, setPrestadorPendienteMensaje] = useState<Prestador | null>(null);
 
   const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
@@ -184,8 +199,8 @@ export default function Usuarios() {
       return;
     }
 
-    if (!yaContacto(prestador.id)) {
-      alert('Solo podés valorar a un prestador con quien hayas tenido contacto. Primero contactalo por WhatsApp.');
+    if (!yaReservo(prestador.id)) {
+      alert('Solo podés valorar a un prestador con quien hayas hecho una reserva.');
       return;
     }
 
@@ -274,61 +289,7 @@ export default function Usuarios() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
       {/* Header */}
-      <header className="bg-[#16213e]/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <img
-              src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-              alt="MServicios"
-              className="w-9 h-9 object-contain"
-            />
-            <span className="text-xl font-bold text-[#e2b040]">MServicios</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {clienteDni ? (
-              <>
-                <button
-                  onClick={() => navigate('/chat')}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-transparent border border-white/20 text-gray-300 rounded-full text-sm font-semibold hover:border-[#e2b040] hover:text-[#e2b040] transition-all cursor-pointer whitespace-nowrap"
-                >
-                  <i className="ri-chat-3-line"></i>
-                  Mensajes
-                </button>
-                <button
-                  onClick={() => navigate('/puntos')}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#e2b040]/10 border border-[#e2b040]/40 text-[#e2b040] rounded-full text-sm font-semibold hover:bg-[#e2b040]/20 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  <i className="ri-medal-line"></i>
-                  {puntosUsuario !== null ? `${puntosUsuario} Puntos` : 'Puntos'}
-                </button>
-                <button
-                  onClick={() => navigate('/mi-cuenta')}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-transparent border border-[#e2b040]/40 text-[#e2b040] rounded-full text-sm font-semibold hover:bg-[#e2b040]/10 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  <i className="ri-user-line"></i>
-                  Mi Cuenta
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => navigate('/mi-cuenta')}
-                className="flex items-center gap-2 px-5 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-full font-semibold hover:bg-[#f0d080] transition-all whitespace-nowrap cursor-pointer text-sm"
-              >
-                <i className="ri-user-line"></i>
-                Iniciar Sesión
-              </button>
-            )}
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-4 py-2 bg-transparent border border-gray-600 text-gray-400 rounded-full font-semibold hover:border-[#e2b040] hover:text-[#e2b040] transition-all whitespace-nowrap cursor-pointer text-sm"
-            >
-              <i className="ri-home-line"></i>
-              Inicio
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader puntosUsuario={puntosUsuario} />
 
       {/* Success toast */}
       {mensajeExito && (
@@ -338,7 +299,7 @@ export default function Usuarios() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Encontrá tu profesional</h1>
@@ -428,7 +389,7 @@ export default function Usuarios() {
                 const vals = prestador.valoraciones || [];
                 const promedio = calcularPromedio(vals);
                 const expandido = mostrarValoraciones === prestador.id;
-                const puedeValorar = clienteDni && yaContacto(prestador.id);
+                const puedeValorar = clienteDni && yaReservo(prestador.id);
 
                 return (
                   <div key={prestador.id}
@@ -473,27 +434,30 @@ export default function Usuarios() {
 
                       {/* Action buttons */}
                       <div className="space-y-2">
-                        {/* Botón de mensajes (solo si hay sesión) */}
-                        {clienteDni && (
-                          <button
-                            onClick={() => {
-                              marcarContactado(prestador.id);
-                              navigate(`/chat?prestador=${prestador.id}`);
-                            }}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#e2b040] hover:bg-[#f0d080] text-[#1a1a2e] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
-                          >
-                            <i className="ri-chat-3-line text-lg"></i>
-                            Enviar mensaje
-                          </button>
-                        )}
-
-                        {/* WhatsApp button */}
+                        {/* Botón Reservar */}
                         <button
-                          onClick={() => handleContactar(prestador)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                          onClick={() => navigate(`/reservar/${prestador.id}`)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#e2b040] hover:bg-[#f0d080] text-[#1a1a2e] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
                         >
-                          <i className="ri-whatsapp-line text-lg"></i>
-                          Contactar por WhatsApp
+                          <i className="ri-calendar-check-line text-lg"></i>
+                          Reservar turno
+                        </button>
+
+                        {/* Botón Enviar mensaje (siempre visible) */}
+                        <button
+                          onClick={() => {
+                            if (!clienteDni) {
+                              setPrestadorPendienteMensaje(prestador);
+                              setMostrarModalMensaje(true);
+                              return;
+                            }
+                            marcarContactado(prestador.id);
+                            navigate(`/chat?prestador=${prestador.id}`);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-transparent border border-[#e2b040]/40 hover:bg-[#e2b040]/10 text-[#e2b040] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                        >
+                          <i className="ri-chat-3-line text-lg"></i>
+                          Enviar mensaje
                         </button>
 
                         {/* Rate button */}
@@ -508,7 +472,7 @@ export default function Usuarios() {
                           }`}
                         >
                           <i className="ri-star-line"></i>
-                          {puedeValorar ? 'Dejar Valoración' : 'Contactá primero para valorar'}
+                          {puedeValorar ? 'Dejar Valoración' : 'Reservá primero para valorar'}
                         </button>
 
                         {/* Show reviews toggle */}
@@ -567,8 +531,8 @@ export default function Usuarios() {
 
       {/* Rating Modal */}
       {mostrarModalValoracion && prestadorSeleccionado && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#16213e] rounded-2xl p-8 max-w-md w-full border border-[#e2b040]/20">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold text-white mb-1">
               Valorar a {prestadorSeleccionado.nombre}
             </h3>
@@ -618,6 +582,50 @@ export default function Usuarios() {
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviandoValoracion ? 'Enviando...' : 'Enviar valoración'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: registrate para enviar mensajes */}
+      {mostrarModalMensaje && prestadorPendienteMensaje && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setMostrarModalMensaje(false)}
+        >
+          <div
+            className="bg-[#16213e] rounded-2xl p-8 max-w-sm w-full border border-[#e2b040]/20"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mx-auto mb-5">
+              <i className="ri-chat-3-line text-3xl text-[#e2b040]" />
+            </div>
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              Registrate para enviar mensajes
+            </h3>
+            <p className="text-gray-400 text-sm text-center mb-6">
+              Necesitás tener una cuenta para chatear con{' '}
+              <span className="text-white font-semibold">
+                {prestadorPendienteMensaje.nombre} {prestadorPendienteMensaje.apellido}
+              </span>.
+              ¡Además acumulás puntos y obtenés descuentos!
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  localStorage.setItem('mservicios_pending_chat', prestadorPendienteMensaje.id);
+                  navigate('/mi-cuenta');
+                }}
+                className="w-full py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold hover:bg-[#f0d080] transition-colors cursor-pointer"
+              >
+                Registrarme / Iniciar sesión
+              </button>
+              <button
+                onClick={() => setMostrarModalMensaje(false)}
+                className="w-full py-2.5 bg-transparent border border-white/10 text-gray-400 rounded-xl text-sm hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                Cancelar
               </button>
             </div>
           </div>

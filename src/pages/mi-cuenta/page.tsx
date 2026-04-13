@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LoginUsuario from '../usuarios/components/LoginUsuario';
 import RegistroUsuario from '../usuarios/components/RegistroUsuario';
 import PanelUsuario from '../usuarios/components/PanelUsuario';
@@ -6,6 +7,7 @@ import PanelUsuario from '../usuarios/components/PanelUsuario';
 type Vista = 'login' | 'registro' | 'panel';
 
 export default function MiCuenta() {
+  const navigate = useNavigate();
   const [vista, setVista] = useState<Vista>('login');
   const [clienteDni, setClienteDni] = useState<string | null>(null);
 
@@ -17,11 +19,22 @@ export default function MiCuenta() {
     }
   }, []);
 
+  function redirigirPostAuth() {
+    const pendingChat = localStorage.getItem('mservicios_pending_chat');
+    if (pendingChat) {
+      localStorage.removeItem('mservicios_pending_chat');
+      navigate(`/chat?prestador=${pendingChat}`);
+      return;
+    }
+    // Sin pendiente: quedarse en el panel (no redirigir)
+  }
+
   const handleLoginExitoso = (dni: string) => {
     localStorage.removeItem('dniPrestador');
     localStorage.removeItem('mservicios_prestador_id');
     localStorage.setItem('mservicios_cliente_dni', dni);
     setClienteDni(dni);
+    redirigirPostAuth();
     setVista('panel');
   };
 
@@ -30,6 +43,7 @@ export default function MiCuenta() {
     localStorage.removeItem('mservicios_prestador_id');
     localStorage.setItem('mservicios_cliente_dni', dni);
     setClienteDni(dni);
+    redirigirPostAuth();
     setVista('panel');
   };
 

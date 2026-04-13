@@ -1,23 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { OrdenCard } from '../../components/ordenes/OrdenCard';
-import { EstadoBadge } from '../../components/ordenes/EstadoBadge';
-import { ModalCrearOrden } from '../../components/ordenes/ModalCrearOrden';
-import { ordenesService } from '../../services/ordenesService';
 import { chatService } from '../../services/chatService';
-import type { Orden, OrdenEstado, ListaOrdenes } from '../../types/ordenes';
 import type { Conversacion, ConversacionResumen, Mensaje } from '../../types/chat';
-import { ESTADO_LABELS, formatMonto } from '../../types/ordenes';
 import { formatFechaCompleta, formatHoraChat } from '../../types/chat';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
-const TODOS_LOS_ESTADOS: (OrdenEstado | '')[] = [
-  '', 'draft', 'payment_pending', 'paid_pending_service',
-  'service_completed', 'released', 'cancelled', 'refunded',
-];
-
-type AdminView = 'home' | 'ordenes' | 'mensajes';
+type AdminView = 'home' | 'mensajes';
 
 function LoginScreen({
   passwordInput,
@@ -40,14 +29,14 @@ function LoginScreen({
             <i className="ri-shield-keyhole-line text-3xl text-[#e2b040]" />
           </div>
           <h1 className="text-2xl font-bold text-white">Panel Admin</h1>
-          <p className="text-gray-400 text-sm mt-1">Órdenes y conversaciones</p>
+          <p className="text-gray-400 text-sm mt-1">Mensajes y conversaciones</p>
         </div>
         <form onSubmit={onLogin} className="space-y-4">
           <input
             type="password"
             value={passwordInput}
             onChange={e => onPasswordChange(e.target.value)}
-            placeholder="Contraseña de administrador"
+            placeholder="Contrasena de administrador"
             className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50"
             autoFocus
           />
@@ -63,7 +52,7 @@ function LoginScreen({
             onClick={onBack}
             className="w-full py-2.5 text-sm text-gray-400 hover:text-white transition-colors"
           >
-            ← Volver al inicio
+            Volver al inicio
           </button>
         </form>
       </div>
@@ -71,35 +60,12 @@ function LoginScreen({
   );
 }
 
-function AdminHome({
-  onEntrarOrdenes,
-  onEntrarMensajes,
-}: {
-  onEntrarOrdenes: () => void;
-  onEntrarMensajes: () => void;
-}) {
+function AdminHome({ onEntrarMensajes }: { onEntrarMensajes: () => void }) {
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <button
-        onClick={onEntrarOrdenes}
-        className="text-left bg-[#16213e] border border-white/10 rounded-3xl p-7 hover:border-[#e2b040]/50 hover:bg-[#1b2748] transition-colors"
-      >
-        <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mb-5">
-          <i className="ri-file-list-3-line text-3xl text-[#e2b040]" />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Órdenes</h2>
-        <p className="text-gray-400 text-sm leading-relaxed mb-6">
-          Ver el tablero actual de órdenes, crear nuevas y ejecutar acciones administrativas.
-        </p>
-        <span className="inline-flex items-center gap-2 text-[#e2b040] font-semibold text-sm">
-          Entrar a órdenes
-          <i className="ri-arrow-right-line" />
-        </span>
-      </button>
-
+    <div className="max-w-3xl">
       <button
         onClick={onEntrarMensajes}
-        className="text-left bg-[#16213e] border border-white/10 rounded-3xl p-7 hover:border-[#e2b040]/50 hover:bg-[#1b2748] transition-colors"
+        className="w-full text-left bg-[#16213e] border border-white/10 rounded-3xl p-7 hover:border-[#e2b040]/50 hover:bg-[#1b2748] transition-colors"
       >
         <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mb-5">
           <i className="ri-chat-3-line text-3xl text-[#e2b040]" />
@@ -254,10 +220,10 @@ function MensajesAdminView({
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1 truncate">
-                      {conv.orden_titulo || 'Conversación directa'}
+                      {conv.orden_titulo || 'Conversacion directa'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1 truncate">
-                      {conv.ultimo_mensaje_contenido || 'Sin mensajes aún'}
+                      {conv.ultimo_mensaje_contenido || 'Sin mensajes aun'}
                     </p>
                   </button>
                 );
@@ -274,7 +240,7 @@ function MensajesAdminView({
           ) : !convActiva ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <i className="ri-chat-3-line text-4xl text-gray-600 mb-3" />
-              <p className="text-gray-400 font-medium">Elegí una conversación</p>
+              <p className="text-gray-400 font-medium">Elegi una conversacion</p>
               <p className="text-gray-600 text-sm mt-1">Vas a poder ver todos los mensajes como administrador.</p>
             </div>
           ) : (
@@ -283,23 +249,19 @@ function MensajesAdminView({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-white font-semibold text-lg">
-                      {convActiva.orden_titulo || 'Conversación directa'}
+                      {convActiva.orden_titulo || 'Conversacion directa'}
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
                       Cliente {convActiva.cliente_dni} · Prestador {convActiva.prestador_id}
                     </p>
-                    {convActiva.orden_id && (
-                      <p className="text-xs text-gray-500 mt-1">Orden: {convActiva.orden_id}</p>
-                    )}
                   </div>
-                  {convActiva.orden_estado && <EstadoBadge estado={convActiva.orden_estado as OrdenEstado} />}
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 space-y-3 min-h-[520px]">
                 {mensajes.length === 0 ? (
                   <div className="text-center text-gray-500 py-16">
-                    Esta conversación todavía no tiene mensajes.
+                    Esta conversacion todavia no tiene mensajes.
                   </div>
                 ) : (
                   mensajes.map(msg => <MensajeBurbuja key={msg.id} mensaje={msg} />)
@@ -313,173 +275,12 @@ function MensajesAdminView({
   );
 }
 
-function OrdenesAdminView({
-  datos,
-  cargando,
-  error,
-  filtroEstado,
-  pagina,
-  onFiltroEstadoChange,
-  onActualizar,
-  onPaginaChange,
-  onNuevaOrden,
-  onCompletar,
-  onLiberar,
-}: {
-  datos: ListaOrdenes | null;
-  cargando: boolean;
-  error: string;
-  filtroEstado: OrdenEstado | '';
-  pagina: number;
-  onFiltroEstadoChange: (value: OrdenEstado | '') => void;
-  onActualizar: () => void;
-  onPaginaChange: (value: number) => void;
-  onNuevaOrden: () => void;
-  onCompletar: (orden: Orden) => void;
-  onLiberar: (orden: Orden) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-sm text-gray-400">Filtrar por estado:</label>
-          <select
-            value={filtroEstado}
-            onChange={e => onFiltroEstadoChange(e.target.value as OrdenEstado | '')}
-            className="bg-[#16213e] border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#e2b040]/50"
-          >
-            {TODOS_LOS_ESTADOS.map(est => (
-              <option key={est} value={est}>
-                {est === '' ? 'Todos los estados' : ESTADO_LABELS[est as OrdenEstado]}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={onActualizar}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition-colors"
-          >
-            <i className="ri-refresh-line" />
-            Actualizar
-          </button>
-        </div>
-
-        <button
-          onClick={onNuevaOrden}
-          className="flex items-center gap-2 px-4 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-semibold text-sm hover:bg-[#e2b040]/90 transition-colors"
-        >
-          <i className="ri-file-add-line" />
-          Nueva orden
-        </button>
-      </div>
-
-      {datos && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Total órdenes', valor: datos.total, icono: 'ri-file-list-line', color: 'text-white' },
-            {
-              label: 'Pagadas pendientes',
-              valor: datos.ordenes.filter(o => o.estado === 'paid_pending_service').length,
-              icono: 'ri-shield-check-line',
-              color: 'text-blue-400',
-            },
-            {
-              label: 'Servicio completado',
-              valor: datos.ordenes.filter(o => o.estado === 'service_completed').length,
-              icono: 'ri-check-double-line',
-              color: 'text-purple-400',
-            },
-            {
-              label: 'Liberadas',
-              valor: datos.ordenes.filter(o => o.estado === 'released').length,
-              icono: 'ri-money-dollar-circle-line',
-              color: 'text-green-400',
-            },
-          ].map(stat => (
-            <div key={stat.label} className="bg-[#16213e] border border-white/10 rounded-2xl p-4">
-              <i className={`${stat.icono} text-2xl ${stat.color} mb-2 block`} />
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.valor}</p>
-              <p className="text-gray-400 text-xs mt-0.5">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {cargando ? (
-        <div className="flex items-center justify-center py-16">
-          <i className="ri-loader-4-line animate-spin text-3xl text-[#e2b040]" />
-        </div>
-      ) : error ? (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 flex gap-2">
-          <i className="ri-error-warning-line" />
-          {error}
-        </div>
-      ) : datos?.ordenes.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <i className="ri-file-list-3-line text-4xl mb-3 block" />
-          No hay órdenes{filtroEstado ? ` con estado "${ESTADO_LABELS[filtroEstado as OrdenEstado]}"` : ''}.
-        </div>
-      ) : (
-        <>
-          <div className="grid md:grid-cols-2 gap-4">
-            {datos?.ordenes.map(orden => (
-              <OrdenCard
-                key={orden.id}
-                orden={orden}
-                esAdmin
-                onCompletarServicio={onCompletar}
-                onLiberarFondos={onLiberar}
-              />
-            ))}
-          </div>
-
-          {datos && datos.totalPaginas > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => onPaginaChange(Math.max(1, pagina - 1))}
-                disabled={pagina === 1}
-                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-40"
-              >
-                <i className="ri-arrow-left-s-line" />
-              </button>
-              <span className="text-gray-400 text-sm">
-                Pág. {pagina} / {datos.totalPaginas}
-              </span>
-              <button
-                onClick={() => onPaginaChange(Math.min(datos.totalPaginas, pagina + 1))}
-                disabled={pagina === datos.totalPaginas}
-                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-40"
-              >
-                <i className="ri-arrow-right-s-line" />
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 export default function AdminPage() {
   const navigate = useNavigate();
   const [autenticado, setAutenticado] = useState(sessionStorage.getItem('mservicios_admin_ok') === '1');
   const [passwordInput, setPasswordInput] = useState('');
   const [errorAuth, setErrorAuth] = useState('');
   const [vista, setVista] = useState<AdminView>('home');
-
-  const [datos, setDatos] = useState<ListaOrdenes | null>(null);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState('');
-
-  const [filtroEstado, setFiltroEstado] = useState<OrdenEstado | ''>('');
-  const [pagina, setPagina] = useState(1);
-
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [accion, setAccion] = useState<{ tipo: 'completar' | 'liberar'; orden: Orden } | null>(null);
-  const [notaAccion, setNotaAccion] = useState('');
-  const [metodoTransf, setMetodoTransf] = useState('');
-  const [refTransf, setRefTransf] = useState('');
-  const [procesando, setProcesando] = useState(false);
-  const [mensajeOk, setMensajeOk] = useState('');
 
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[]>([]);
   const [convActiva, setConvActiva] = useState<Conversacion | null>(null);
@@ -502,25 +303,9 @@ export default function AdminPage() {
       setAutenticado(true);
       sessionStorage.setItem('mservicios_admin_ok', '1');
     } else {
-      setErrorAuth('Contraseña incorrecta');
+      setErrorAuth('Contrasena incorrecta');
     }
   }
-
-  const cargarOrdenes = useCallback(async () => {
-    setCargando(true);
-    setError('');
-    try {
-      const res = await ordenesService.listarOrdenes(
-        { esAdmin: true },
-        { estado: filtroEstado || undefined, page: pagina, limit: 20 }
-      );
-      setDatos(res);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al cargar órdenes');
-    } finally {
-      setCargando(false);
-    }
-  }, [filtroEstado, pagina]);
 
   const cargarChats = useCallback(async (filtros?: { cliente_dni?: string; prestador_id?: string }) => {
     setCargandoListaChats(true);
@@ -537,9 +322,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!autenticado) return;
-    if (vista === 'ordenes') cargarOrdenes();
     if (vista === 'mensajes') cargarChats(filtrosChatAplicados);
-  }, [autenticado, vista, cargarOrdenes, cargarChats, filtrosChatAplicados]);
+  }, [autenticado, vista, cargarChats, filtrosChatAplicados]);
 
   async function abrirConversacionAdmin(conv: ConversacionResumen) {
     setCargandoConv(true);
@@ -550,7 +334,7 @@ export default function AdminPage() {
       setConvActiva(res.conversacion);
       setMensajes(res.mensajes);
     } catch (err) {
-      console.error('Error al abrir conversación admin:', err);
+      console.error('Error al abrir conversacion admin:', err);
     } finally {
       setCargandoConv(false);
     }
@@ -572,35 +356,6 @@ export default function AdminPage() {
     setFiltrosChatAplicados({});
     setConvActiva(null);
     setMensajes([]);
-  }
-
-  async function confirmarAccion() {
-    if (!accion) return;
-    setProcesando(true);
-    setMensajeOk('');
-    try {
-      if (accion.tipo === 'completar') {
-        await ordenesService.completarServicio({ orden_id: accion.orden.id, nota: notaAccion || undefined });
-        setMensajeOk('Servicio marcado como completado');
-      } else {
-        await ordenesService.liberarFondos({
-          orden_id: accion.orden.id,
-          metodo_transferencia: metodoTransf || undefined,
-          referencia_transferencia: refTransf || undefined,
-          nota: notaAccion || undefined,
-        });
-        setMensajeOk('Fondos liberados al prestador');
-      }
-      setAccion(null);
-      setNotaAccion('');
-      setMetodoTransf('');
-      setRefTransf('');
-      await cargarOrdenes();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error');
-    } finally {
-      setProcesando(false);
-    }
   }
 
   if (!autenticado) {
@@ -632,7 +387,7 @@ export default function AdminPage() {
                 Panel Admin
               </h1>
               <p className="text-xs text-gray-500">
-                {vista === 'home' ? 'Elegí un módulo' : vista === 'ordenes' ? 'Gestión de órdenes' : 'Visualizador total de mensajes'}
+                {vista === 'home' ? 'Elegi un modulo' : 'Visualizador total de mensajes'}
               </p>
             </div>
           </div>
@@ -662,34 +417,8 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        {mensajeOk && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-400 flex items-center gap-2">
-            <i className="ri-checkbox-circle-line" />
-            {mensajeOk}
-          </div>
-        )}
-
         {vista === 'home' && (
-          <AdminHome
-            onEntrarOrdenes={() => setVista('ordenes')}
-            onEntrarMensajes={() => setVista('mensajes')}
-          />
-        )}
-
-        {vista === 'ordenes' && (
-          <OrdenesAdminView
-            datos={datos}
-            cargando={cargando}
-            error={error}
-            filtroEstado={filtroEstado}
-            pagina={pagina}
-            onFiltroEstadoChange={value => { setFiltroEstado(value); setPagina(1); }}
-            onActualizar={cargarOrdenes}
-            onPaginaChange={setPagina}
-            onNuevaOrden={() => setMostrarModal(true)}
-            onCompletar={orden => { setAccion({ tipo: 'completar', orden }); setNotaAccion(''); }}
-            onLiberar={orden => { setAccion({ tipo: 'liberar', orden }); setNotaAccion(''); }}
-          />
+          <AdminHome onEntrarMensajes={() => setVista('mensajes')} />
         )}
 
         {vista === 'mensajes' && (
@@ -710,111 +439,6 @@ export default function AdminPage() {
           />
         )}
       </main>
-
-      {mostrarModal && (
-        <ModalCrearOrden
-          onClose={() => setMostrarModal(false)}
-          onCreada={() => {
-            setMostrarModal(false);
-            cargarOrdenes();
-          }}
-        />
-      )}
-
-      {accion && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-        >
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h2 className="font-bold text-white">
-                {accion.tipo === 'completar' ? 'Confirmar servicio completado' : 'Liberar fondos'}
-              </h2>
-              <button onClick={() => setAccion(null)} className="text-gray-400 hover:text-white transition-colors">
-                <i className="ri-close-line text-xl" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="bg-[#16213e] rounded-xl p-4">
-                <p className="text-white font-semibold">{accion.orden.titulo}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <EstadoBadge estado={accion.orden.estado} />
-                  <span className="text-[#e2b040] font-bold">{formatMonto(accion.orden.monto_bruto)}</span>
-                </div>
-                {accion.tipo === 'liberar' && (
-                  <p className="text-sm text-green-400 mt-2">
-                    Se liberarán <strong>{formatMonto(accion.orden.monto_prestador)}</strong> al prestador.
-                  </p>
-                )}
-              </div>
-
-              {accion.tipo === 'liberar' && (
-                <>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Método de transferencia</label>
-                    <input
-                      type="text"
-                      value={metodoTransf}
-                      onChange={e => setMetodoTransf(e.target.value)}
-                      placeholder="Ej: Transferencia bancaria, Mercado Pago..."
-                      className="w-full bg-[#16213e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1.5">Referencia / comprobante</label>
-                    <input
-                      type="text"
-                      value={refTransf}
-                      onChange={e => setRefTransf(e.target.value)}
-                      placeholder="Nro de operación o comprobante"
-                      className="w-full bg-[#16213e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1.5">Nota interna (opcional)</label>
-                <textarea
-                  value={notaAccion}
-                  onChange={e => setNotaAccion(e.target.value)}
-                  placeholder="Observaciones para el registro..."
-                  rows={2}
-                  className="w-full bg-[#16213e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setAccion(null)}
-                  className="flex-1 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmarAccion}
-                  disabled={procesando}
-                  className={`flex-1 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 ${
-                    accion.tipo === 'completar'
-                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                      : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                  }`}
-                >
-                  {procesando ? (
-                    <><i className="ri-loader-4-line animate-spin" /> Procesando...</>
-                  ) : accion.tipo === 'completar' ? (
-                    <><i className="ri-check-double-line" /> Confirmar</>
-                  ) : (
-                    <><i className="ri-money-dollar-circle-line" /> Liberar fondos</>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

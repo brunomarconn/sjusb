@@ -15,6 +15,8 @@ const Orden = lazy(() => import('../pages/orden/page'));
 const Pagar = lazy(() => import('../pages/pagar/page'));
 // Chat interno
 const Chat = lazy(() => import('../pages/chat/page'));
+// Reservas
+const Reservar = lazy(() => import('../pages/reservar/page'));
 /* The NotFound component lives directly in the pages folder */
 const NotFound = lazy(() => import('../pages/NotFound'));
 
@@ -59,6 +61,10 @@ const routes: RouteObject[] = [
   {
     path: '/chat',
     element: <Chat />,
+  },
+  {
+    path: '/reservar/:prestadorId',
+    element: <Reservar />,
   },
   {
     path: '*',

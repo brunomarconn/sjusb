@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, type Prestador, type Valoracion } from '../../../lib/supabase';
 
+// ── Tipos disponibilidad ──────────────────────────────────────
+type Turno = 'mañana' | 'tarde';
+type DisponibilidadMap = Record<number, Turno[]>; // dia_semana → turnos activos
+
+const DIAS_SEMANA = [
+  { valor: 1, nombre: 'Lunes' },
+  { valor: 2, nombre: 'Martes' },
+  { valor: 3, nombre: 'Miércoles' },
+  { valor: 4, nombre: 'Jueves' },
+  { valor: 5, nombre: 'Viernes' },
+  { valor: 6, nombre: 'Sábado' },
+  { valor: 0, nombre: 'Domingo' },
+];
+
 interface PanelPrestadorProps {
   prestadorData: { dni: string };
   onCerrarSesion: () => void;
@@ -47,9 +61,70 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
   });
   const [fotoPreview, setFotoPreview] = useState<string>('');
 
+  // ── Disponibilidad ────────────────────────────────────────
+  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
+  const [guardandoDisp, setGuardandoDisp] = useState(false);
+  const [dispGuardada, setDispGuardada] = useState(false);
+
   useEffect(() => {
     cargarDatos();
   }, [prestadorData.dni]);
+
+  const cargarDisponibilidad = async (prestadorId: string) => {
+    const { data } = await supabase
+      .from('disponibilidad_prestadores')
+      .select('dia_semana, turno')
+      .eq('prestador_id', prestadorId);
+
+    if (data) {
+      const mapa: DisponibilidadMap = {};
+      data.forEach(({ dia_semana, turno }: { dia_semana: number; turno: Turno }) => {
+        if (!mapa[dia_semana]) mapa[dia_semana] = [];
+        mapa[dia_semana].push(turno);
+      });
+      setDisponibilidad(mapa);
+    }
+  };
+
+  const toggleTurno = (dia: number, turno: Turno) => {
+    setDisponibilidad(prev => {
+      const actual = prev[dia] || [];
+      const existe = actual.includes(turno);
+      const nuevo = existe ? actual.filter(t => t !== turno) : [...actual, turno];
+      return { ...prev, [dia]: nuevo };
+    });
+  };
+
+  const guardarDisponibilidad = async () => {
+    if (!prestador) return;
+    setGuardandoDisp(true);
+    try {
+      // Borrar todos los slots actuales del prestador
+      await supabase
+        .from('disponibilidad_prestadores')
+        .delete()
+        .eq('prestador_id', prestador.id);
+
+      // Insertar los nuevos
+      const inserts: { prestador_id: string; dia_semana: number; turno: Turno }[] = [];
+      for (const [dia, turnos] of Object.entries(disponibilidad)) {
+        for (const turno of turnos) {
+          inserts.push({ prestador_id: prestador.id, dia_semana: Number(dia), turno });
+        }
+      }
+
+      if (inserts.length > 0) {
+        await supabase.from('disponibilidad_prestadores').insert(inserts);
+      }
+
+      setDispGuardada(true);
+      setTimeout(() => setDispGuardada(false), 3000);
+    } catch (e) {
+      console.error('Error al guardar disponibilidad:', e);
+    } finally {
+      setGuardandoDisp(false);
+    }
+  };
 
   const cargarDatos = async () => {
     try {
@@ -66,6 +141,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
         setPrestador(prestadorInfo);
         // Guardar UUID para el sistema de chat
         localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
+        cargarDisponibilidad(prestadorInfo.id);
         setFormData({
           nombre: prestadorInfo.nombre,
           apellido: prestadorInfo.apellido,
@@ -183,42 +259,45 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419]">
       {/* Header */}
-      <header className="bg-[#16213e]/80 backdrop-blur-sm border-b border-[#e2b040]/20">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-lg flex items-center justify-center">
-              <i className="ri-tools-line text-xl text-[#1a1a2e]"></i>
+      <header className="bg-[#16213e]/80 backdrop-blur-sm border-b border-[#e2b040]/20 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-9 h-9 bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-lg flex items-center justify-center flex-shrink-0">
+              <i className="ri-tools-line text-lg text-[#1a1a2e]"></i>
             </div>
-            <span className="text-2xl font-bold text-white">MServicios</span>
+            <span className="text-lg font-bold text-white hidden sm:block">MServicios</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors whitespace-nowrap cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Inicio"
             >
-              <i className="ri-home-line mr-2"></i>
-              Inicio
+              <i className="ri-home-line"></i>
+              <span className="hidden sm:inline text-sm">Inicio</span>
             </button>
             <button
               onClick={() => navigate('/chat')}
-              className="px-4 py-2 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors whitespace-nowrap cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Mensajes"
             >
-              <i className="ri-chat-3-line mr-2"></i>
-              Mensajes
+              <i className="ri-chat-3-line"></i>
+              <span className="hidden sm:inline text-sm">Mensajes</span>
             </button>
             <button
               onClick={onCerrarSesion}
-              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors whitespace-nowrap cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Cerrar Sesión"
             >
-              <i className="ri-logout-box-line mr-2"></i>
-              Cerrar Sesión
+              <i className="ri-logout-box-line"></i>
+              <span className="hidden sm:inline text-sm">Cerrar Sesión</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="px-6 py-12">
+      <div className="px-4 py-8 sm:px-6 sm:py-12">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">Mi Perfil</h1>
@@ -416,6 +495,68 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                   <p className="text-gray-400 font-semibold">Valoraciones Totales</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Disponibilidad */}
+          <div className="mt-8">
+            <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Mi Disponibilidad</h2>
+                  <p className="text-gray-400 text-sm mt-1">Configurá los días y turnos en que podés trabajar</p>
+                </div>
+                <button
+                  onClick={guardarDisponibilidad}
+                  disabled={guardandoDisp}
+                  className="px-4 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-lg font-semibold hover:bg-[#f0d080] transition-all text-sm flex items-center gap-2 disabled:opacity-60 cursor-pointer whitespace-nowrap"
+                >
+                  {guardandoDisp ? (
+                    <><i className="ri-loader-4-line animate-spin" /> Guardando...</>
+                  ) : dispGuardada ? (
+                    <><i className="ri-checkbox-circle-line" /> Guardado</>
+                  ) : (
+                    <><i className="ri-save-line" /> Guardar</>
+                  )}
+                </button>
+              </div>
+
+              <div className="grid gap-2">
+                {DIAS_SEMANA.map(({ valor, nombre }) => {
+                  const turnos = disponibilidad[valor] || [];
+                  return (
+                    <div key={valor} className="flex items-center bg-[#16213e] rounded-xl px-4 py-3 gap-3">
+                      <span className="text-white font-medium text-sm flex-shrink-0 w-20">{nombre}</span>
+                      <div className="flex gap-2 flex-1">
+                        {(['mañana', 'tarde'] as Turno[]).map(turno => {
+                          const activo = turnos.includes(turno);
+                          return (
+                            <button
+                              key={turno}
+                              onClick={() => toggleTurno(valor, turno)}
+                              className={`
+                                flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer
+                                ${activo
+                                  ? 'bg-[#e2b040] text-[#1a1a2e]'
+                                  : 'bg-[#1a1a2e] border border-white/10 text-gray-500 hover:border-[#e2b040]/30 hover:text-gray-300'
+                                }
+                              `}
+                            >
+                              <i className={turno === 'mañana' ? 'ri-sun-line' : 'ri-moon-line'} />
+                              {turno === 'mañana' ? 'Mañana' : 'Tarde'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-gray-600 text-xs mt-4">
+                <i className="ri-information-line mr-1" />
+                Los clientes verán estos días al querer reservar un turno con vos.
+              </p>
             </div>
           </div>
 
