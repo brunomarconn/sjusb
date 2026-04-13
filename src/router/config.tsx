@@ -11,7 +11,6 @@ const MiCuenta = lazy(() => import('../pages/mi-cuenta/page'));
 const Puntos = lazy(() => import('../pages/puntos/page'));
 // Sistema de pagos / órdenes
 const Admin = lazy(() => import('../pages/admin/page'));
-const Orden = lazy(() => import('../pages/orden/page'));
 const Pagar = lazy(() => import('../pages/pagar/page'));
 // Chat interno
 const Chat = lazy(() => import('../pages/chat/page'));
@@ -49,10 +48,6 @@ const routes: RouteObject[] = [
   {
     path: '/admin',
     element: <Admin />,
-  },
-  {
-    path: '/orden/:id',
-    element: <Orden />,
   },
   {
     path: '/pagar/:id',
