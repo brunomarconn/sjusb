@@ -15,9 +15,11 @@ interface Prestador {
   nombre: string;
   apellido: string;
   categoria: string;
+  zona?: string;
   foto_url: string;
   telefono?: string;
 }
+
 
 interface DisponibilidadSlot {
   dia_semana: number; // 0=Dom, 1=Lun, ..., 6=Sáb
@@ -86,6 +88,7 @@ export default function ReservarPage() {
   useEffect(() => {
     if (!prestadorId) return;
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prestadorId]);
 
   const cargarDatos = async () => {
@@ -95,7 +98,7 @@ export default function ReservarPage() {
       // Cargar prestador
       const { data: p, error: pErr } = await supabase
         .from('prestadores')
-        .select('id, nombre, apellido, categoria, foto_url, telefono')
+        .select('id, nombre, apellido, categoria, zona, foto_url, telefono')
         .eq('id', prestadorId)
         .maybeSingle();
 
@@ -202,6 +205,7 @@ export default function ReservarPage() {
           prestador_nombre:    prestador.nombre,
           prestador_apellido:  prestador.apellido,
           prestador_categoria: prestador.categoria,
+          prestador_zona:      prestador.zona,
           nombre:   nombre.trim(),
           apellido: apellido.trim(),
           telefono: telefono.replace(/\D/g, ''),
@@ -302,6 +306,12 @@ export default function ReservarPage() {
             <span className="inline-block px-2.5 py-0.5 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-xs font-medium capitalize mt-1">
               {prestador.categoria}
             </span>
+            {prestador.zona && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#1a1a2e] text-gray-400 rounded-full text-xs font-medium mt-1">
+                <i className="ri-map-pin-line" />
+                {prestador.zona}
+              </span>
+            )}
           </div>
         </div>
 
@@ -507,4 +517,4 @@ export default function ReservarPage() {
       </div>
     </div>
   );
-} // 351 322-7999, 351 657-6801
+}

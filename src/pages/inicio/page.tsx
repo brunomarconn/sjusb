@@ -252,36 +252,36 @@ export default function Inicio() {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
             Conectamos servicios<br />
             <span className="text-[#e2b040]">con quienes los necesitan</span>
           </h1>
 
-          <p className="text-gray-300 text-base md:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-gray-300 text-sm sm:text-base md:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
             Nuestra plataforma conecta usuarios con prestadores de servicios, facilitando el contacto y promoviendo transparencia, eficiencia y buenos resultados.
           </p>
 
           {/* Call‑to‑action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 w-full max-w-sm sm:max-w-none mx-auto">
             <button
               onClick={() => navigate('/mi-cuenta')}
-              className="px-8 py-3.5 bg-[#e2b040] text-[#1a1a2e] rounded-full font-bold text-base hover:bg-[#f0d080] transition-all duration-300 whitespace-nowrap flex items-center gap-2 shadow-lg shadow-[#e2b040]/30 cursor-pointer"
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#e2b040] text-[#1a1a2e] rounded-full font-bold text-base hover:bg-[#f0d080] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-[#e2b040]/30 cursor-pointer"
             >
               <i className="ri-user-line"></i>
               Soy Usuario
             </button>
             <button
               onClick={() => navigate('/prestadores')}
-              className="px-8 py-3.5 bg-transparent border-2 border-[#e2b040] text-[#e2b040] rounded-full font-bold text-base hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap flex items-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-8 py-3.5 bg-transparent border-2 border-[#e2b040] text-[#e2b040] rounded-full font-bold text-base hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
             >
               <i className="ri-briefcase-line"></i>
-              Soy Prestador de Servicios
+              Soy Prestador
             </button>
           </div>
 
           {/* Points banner */}
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-full text-sm text-[#f0d080] mb-4">
-            <i className="ri-medal-line text-[#e2b040]"></i>
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-full text-xs sm:text-sm text-[#f0d080] mb-4 max-w-xs sm:max-w-none text-center">
+            <i className="ri-medal-line text-[#e2b040] shrink-0"></i>
             <span>Acumulá puntos y obtené un <strong>10% de descuento</strong> en tus servicios</span>
           </div>
 
@@ -296,31 +296,31 @@ export default function Inicio() {
       </section>
 
       {/* Services Grid */}
-      <section id="servicios" className="py-16 px-6">
+      <section id="servicios" className="py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-white mb-2 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 text-center">
             Nuestros Servicios
           </h2>
-          <p className="text-gray-400 text-center mb-10">
-            Hacé clic en cualquier servicio para ver los prestadores disponibles
+          <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10">
+            Tocá cualquier servicio para ver los prestadores disponibles
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {servicios.map((servicio) => (
               <button
                 key={servicio.categoria}
                 onClick={() => handleServicioClick(servicio.categoria)}
                 className="group relative bg-[#16213e]/60 rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/60 transition-all duration-300 hover:shadow-xl hover:shadow-[#e2b040]/10 hover:scale-[1.03] cursor-pointer text-left"
               >
-                <div className="w-full h-40 overflow-hidden relative">
+                <div className="w-full h-32 sm:h-40 overflow-hidden relative">
                   <img
                     src={servicio.imagen}
                     alt={servicio.nombre}
                     className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 h-40 bg-gradient-to-t from-[#1a1a2e]/80 via-transparent to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e]/80 via-transparent to-transparent"></div>
                 </div>
-                <div className="p-3 flex items-center gap-2 min-h-[60px]">
+                <div className="p-2.5 sm:p-3 flex items-center gap-2 min-h-[52px]">
                   <div className="w-8 h-8 flex items-center justify-center bg-[#e2b040]/20 rounded-lg shrink-0">
                     <i className={`${servicio.icono} text-[#e2b040] text-base`}></i>
                   </div>
@@ -336,26 +336,26 @@ export default function Inicio() {
       </section>
 
       {/* How it works — rediseñado */}
-      <section id="como-funciona" className="py-20 px-6 bg-[#16213e]/50">
+      <section id="como-funciona" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#16213e]/50">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10 sm:mb-14">
             <span className="inline-block px-4 py-1 bg-[#e2b040]/15 text-[#e2b040] rounded-full text-sm font-semibold mb-4 tracking-wide uppercase">
               Simple y rápido
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
               ¿Cómo funciona?
             </h2>
-            <p className="text-gray-400 max-w-xl mx-auto text-base">
+            <p className="text-gray-400 max-w-xl mx-auto text-sm sm:text-base">
               Un proceso simple y transparente para conectarte con el profesional ideal
             </p>
           </div>
 
           {/* Pasos en grid responsive */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10 sm:mb-16">
             {pasos.map((paso, idx) => (
               <div
                 key={paso.numero}
-                className="relative bg-gradient-to-b from-[#1a1a2e]/90 to-[#16213e]/80 rounded-2xl border border-[#e2b040]/25 p-7 flex flex-col items-center text-center hover:border-[#e2b040]/70 hover:scale-[1.03] transition-all duration-300 group"
+                className="relative bg-gradient-to-b from-[#1a1a2e]/90 to-[#16213e]/80 rounded-2xl border border-[#e2b040]/25 p-4 sm:p-7 flex flex-col items-center text-center hover:border-[#e2b040]/70 hover:scale-[1.03] transition-all duration-300 group"
               >
                 {/* Conector entre pasos (solo desktop) */}
                 {idx < pasos.length - 1 && (
@@ -368,56 +368,55 @@ export default function Inicio() {
                   {paso.numero}
                 </span>
                 {/* Ícono */}
-                <div className="w-16 h-16 flex items-center justify-center bg-[#e2b040]/15 border border-[#e2b040]/30 rounded-2xl mb-5 group-hover:bg-[#e2b040]/25 transition-colors">
-                  <i className={`${paso.icono} text-[#e2b040] text-3xl`}></i>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center bg-[#e2b040]/15 border border-[#e2b040]/30 rounded-2xl mb-3 sm:mb-5 group-hover:bg-[#e2b040]/25 transition-colors">
+                  <i className={`${paso.icono} text-[#e2b040] text-2xl sm:text-3xl`}></i>
                 </div>
-                <h3 className="text-white font-bold text-lg mb-3">{paso.titulo}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{paso.descripcion}</p>
+                <h3 className="text-white font-bold text-sm sm:text-lg mb-2 sm:mb-3">{paso.titulo}</h3>
+                <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{paso.descripcion}</p>
               </div>
             ))}
           </div>
 
           {/* Imagen ilustrativa mejorada */}
-          <div className="relative rounded-3xl overflow-hidden border border-[#e2b040]/20 shadow-2xl shadow-[#e2b040]/10">
-            <img
-              src="https://readdy.ai/api/search-image?query=diverse%20team%20of%20professional%20service%20workers%20plumber%20electrician%20painter%20gardener%20standing%20together%20smiling%20confident%20uniforms%20tools%20dark%20studio%20background%20warm%20golden%20accent%20lighting%20professional%20corporate%20photography&width=1200&height=480&seq=como_funciona_team_v2&orientation=landscape"
-              alt="Equipo de profesionales MRServicios"
-              className="w-full object-cover object-top"
-              style={{ maxHeight: '380px' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e]/80 via-[#1a1a2e]/30 to-transparent"></div>
-            <div className="absolute inset-0 flex items-center px-8 md:px-16">
-              <div className="max-w-md">
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                  Profesionales <span className="text-[#e2b040]">verificados</span> y confiables
-                </h3>
-                <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-6">
-                  Cada prestador pasa por un proceso de verificación para garantizarte calidad y seguridad en cada servicio.
-                </p>
-                <button
-                  onClick={() => navigate('/usuarios')}
-                  className="px-6 py-3 bg-[#e2b040] text-[#1a1a2e] rounded-full font-bold text-sm hover:bg-[#f0d080] transition-colors whitespace-nowrap cursor-pointer inline-flex items-center gap-2"
-                >
-                  <i className="ri-arrow-right-circle-line text-lg"></i>
-                  Encontrá tu profesional
-                </button>
-              </div>
+          <div className="rounded-3xl overflow-hidden border border-[#e2b040]/20 shadow-2xl shadow-[#e2b040]/10 flex flex-col md:flex-row">
+            {/* Imagen — siempre visible, altura fija en mobile */}
+            <div className="w-full md:w-1/2 h-52 md:h-auto flex-shrink-0 overflow-hidden">
+              <img
+                src="https://readdy.ai/api/search-image?query=diverse%20team%20of%20professional%20service%20workers%20plumber%20electrician%20painter%20gardener%20standing%20together%20smiling%20confident%20uniforms%20tools%20dark%20studio%20background%20warm%20golden%20accent%20lighting%20professional%20corporate%20photography&width=1200&height=480&seq=como_funciona_team_v2&orientation=landscape"
+                alt="Equipo de profesionales MRServicios"
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+            {/* Contenido — siempre abajo en mobile, a la derecha en desktop */}
+            <div className="flex-1 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-6 md:p-10 flex flex-col justify-center">
+              <h3 className="text-xl md:text-3xl font-bold text-white mb-3">
+                Profesionales <span className="text-[#e2b040]">verificados</span> y confiables
+              </h3>
+              <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-5">
+                Cada prestador pasa por un proceso de verificación para garantizarte calidad y seguridad en cada servicio.
+              </p>
+              <button
+                onClick={() => navigate('/usuarios')}
+                className="w-full md:w-auto md:self-start px-6 py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold text-sm hover:bg-[#f0d080] transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+              >
+                <i className="ri-arrow-right-circle-line text-lg"></i>
+                Encontrá tu profesional
+              </button>
             </div>
           </div>
         </div>
       </section>
 
       {/* About us */}
-      <section id="quienes-somos" className="py-20 px-6 bg-[#1a1a2e]">
+      <section id="quienes-somos" className="py-14 sm:py-20 px-6 bg-[#1a1a2e]">
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="relative">
               <div className="rounded-3xl overflow-hidden border border-[#e2b040]/30 shadow-2xl shadow-[#e2b040]/10">
                 <img
                   src="https://readdy.ai/api/search-image?query=professional%20service%20worker%20in%20uniform%20shaking%20hands%20with%20satisfied%20homeowner%20at%20front%20door%20successful%20job%20completion%20trust%20agreement%20warm%20natural%20light%20residential%20setting%20confident%20smiling%20both%20people&width=700&height=500&seq=quienes_somos_acuerdo_01&orientation=landscape"
                   alt="Profesional y cliente MRServicios"
-                  className="w-full h-full object-cover object-top"
-                  style={{ minHeight: '380px' }}
+                  className="w-full h-56 sm:h-auto object-cover object-top"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a2e]/50 via-transparent to-transparent rounded-3xl"></div>
               </div>
@@ -427,7 +426,7 @@ export default function Inicio() {
               <span className="inline-block px-4 py-1 bg-[#e2b040]/15 text-[#e2b040] rounded-full text-sm font-semibold mb-4 tracking-wide uppercase">
                 Quiénes somos
               </span>
-              <h2 className="text-4xl font-bold text-white mb-4">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
                 Nos encargamos de todo
               </h2>
               <p className="text-gray-400 text-base mb-4 leading-relaxed">
@@ -439,7 +438,7 @@ export default function Inicio() {
                 transparencia, eficiencia y buenos resultados.
               </p>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {[
                   { icono: 'ri-user-add-line', titulo: 'Captación de trabajadores', desc: 'Publicidad y marketing constante' },
                   { icono: 'ri-bank-card-line', titulo: 'Gestión de pagos', desc: 'Cobranzas seguras y puntuales' },
@@ -447,13 +446,13 @@ export default function Inicio() {
                   { icono: 'ri-customer-service-2-line', titulo: 'Atención al cliente', desc: 'Soporte profesional 24/7' },
                   { icono: 'ri-megaphone-line', titulo: 'Publicidad del servicio', desc: 'Presencia digital garantizada' },
                 ].map((item) => (
-                  <div key={item.titulo} className="flex items-start gap-4">
-                    <div className="w-12 h-12 flex items-center justify-center bg-[#e2b040] rounded-full shrink-0">
-                      <i className={`${item.icono} text-[#1a1a2e] text-xl`}></i>
+                  <div key={item.titulo} className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-[#e2b040] rounded-full shrink-0">
+                      <i className={`${item.icono} text-[#1a1a2e] text-base sm:text-xl`}></i>
                     </div>
                     <div>
-                      <h3 className="text-white font-bold text-lg mb-1">{item.titulo}</h3>
-                      <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
+                      <h3 className="text-white font-bold text-sm sm:text-lg mb-0.5">{item.titulo}</h3>
+                      <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -464,10 +463,10 @@ export default function Inicio() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0f1628] pt-16 pb-0 px-6 border-t border-[#e2b040]/20">
+      <footer className="bg-[#0f1628] pt-12 sm:pt-16 pb-0 px-6 border-t border-[#e2b040]/20">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12">
-            <div className="md:col-span-1">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 pb-12">
+            <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-3 mb-4">
                 <img
                   src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"

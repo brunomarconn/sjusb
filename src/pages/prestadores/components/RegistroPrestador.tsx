@@ -18,6 +18,10 @@ const categorias = [
   'maestro particular', 'servicios de catering'
 ];
 
+const zonas = [
+  'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán'
+];
+
 export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: RegistroPrestadorProps) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -29,6 +33,7 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
     confirmarPassword: '',
     telefono: '',
     categoria: '',
+    zona: '',
     descripcion: ''
   });
   const [foto, setFoto] = useState<File | null>(null);
@@ -62,6 +67,11 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
 
     if (!formData.categoria) {
       setError('Seleccioná una categoría');
+      return;
+    }
+
+    if (!formData.zona) {
+      setError('Seleccioná una zona de trabajo');
       return;
     }
 
@@ -288,6 +298,20 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
               <option value="">Seleccioná tu categoría</option>
               {categorias.map((cat) => (
                 <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Zona de Trabajo <span className="text-red-400">*</span></label>
+            <select
+              name="zona" value={formData.zona} onChange={handleChange}
+              className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors cursor-pointer"
+              required
+            >
+              <option value="">Seleccioná tu zona de trabajo</option>
+              {zonas.map((zona) => (
+                <option key={zona} value={zona}>{zona}</option>
               ))}
             </select>
           </div>

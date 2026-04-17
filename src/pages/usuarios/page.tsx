@@ -22,6 +22,7 @@ interface Prestador {
   email: string;
   telefono?: string;
   categoria: string;
+  zona?: string;
   foto_url: string;
   descripcion: string;
   created_at: string;
@@ -38,20 +39,16 @@ const categorias = [
   'maestro particular', 'servicios de catering',
 ];
 
-// Números de WhatsApp de MServicios (round-robin)
-const NUMEROS_WA = ['3516576801', '3513227999', '3512178797'];
-const WA_INDEX_KEY = 'mservicios_wa_index';
+const zonas = [
+  'todas',
+  'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',
+];
+
 // IDs de prestadores con quienes se reservó (para validar valoraciones)
 const RESERVADOS_KEY = 'mservicios_reservados';
 
-function getSiguienteNumeroWA(): string {
-  const idx = parseInt(localStorage.getItem(WA_INDEX_KEY) || '0', 10);
-  const numero = NUMEROS_WA[idx % NUMEROS_WA.length];
-  localStorage.setItem(WA_INDEX_KEY, String((idx + 1) % NUMEROS_WA.length));
-  return numero;
-}
-
 // Llamado desde la página de reserva cuando se completa la reserva
+// eslint-disable-next-line react-refresh/only-export-components
 export function marcarReservado(prestadorId: string) {
   const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
   if (!reservados.includes(prestadorId)) {
@@ -82,6 +79,9 @@ export default function Usuarios() {
   const [categoriaFiltro, setCategoriaFiltro] = useState(() => {
     return searchParams.get('categoria') || 'todas';
   });
+  const [zonaFiltro, setZonaFiltro] = useState(() => {
+    return searchParams.get('zona') || 'todas';
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -104,6 +104,7 @@ export default function Usuarios() {
   useEffect(() => {
     cargarPrestadores();
     if (clienteDni) cargarPuntosUsuario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarPuntosUsuario = async () => {
@@ -115,7 +116,9 @@ export default function Usuarios() {
         .eq('dni', clienteDni)
         .maybeSingle();
       if (data) setPuntosUsuario(data.puntos);
-    } catch (_) {}
+    } catch (error) {
+      console.error('Error al cargar puntos del usuario:', error);
+    }
   };
 
   const cargarPrestadores = async () => {
@@ -125,7 +128,7 @@ export default function Usuarios() {
       const { data, error: err } = await supabase
         .from('prestadores')
         .select(`
-          id, nombre, apellido, dni, email, telefono, categoria, foto_url, descripcion, created_at,
+          id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )
         `)
         .order('created_at', { ascending: false });
@@ -137,7 +140,7 @@ export default function Usuarios() {
       } else {
         setPrestadores(adaptarMock());
       }
-    } catch (_) {
+    } catch {
       setPrestadores(adaptarMock());
     } finally {
       setLoading(false);
@@ -162,34 +165,6 @@ export default function Usuarios() {
       };
     });
 
-  const handleContactar = async (prestador: Prestador) => {
-    // Registrar contacto para permitir valoración
-    marcarContactado(prestador.id);
-
-    // Construir mensaje
-    let mensaje = `Hola! Me contacto desde *MServicios*. Me interesa el servicio de *${prestador.categoria}* del prestador *${prestador.nombre} ${prestador.apellido}*. ¿Me pueden dar más información?`;
-
-    // Si el usuario tiene 5+ puntos, solicitar canjeo automáticamente
-    if (clienteDni && puntosUsuario !== null && puntosUsuario >= 5) {
-      mensaje += ` Además, quiero canjear mis puntos para obtener el *10% de descuento*.`;
-
-      // Resetear puntos en la base de datos
-      try {
-        await supabase
-          .from('clientes')
-          .update({ puntos: 0, tiene_promocion: false })
-          .eq('dni', clienteDni);
-        setPuntosUsuario(0);
-      } catch (_) {}
-
-      setMensajeExito('🎉 ¡Puntos canjeados! Tu solicitud de 10% de descuento se envió al equipo.');
-      setTimeout(() => setMensajeExito(''), 5000);
-    }
-
-    // Round-robin entre nuestros números
-    const numero = getSiguienteNumeroWA();
-    window.open(`https://wa.me/549${numero}?text=${encodeURIComponent(mensaje)}`, '_blank');
-  };
 
   const handleValorar = (prestador: Prestador) => {
     if (!clienteDni) {
@@ -283,7 +258,8 @@ export default function Usuarios() {
       p.descripcion.toLowerCase().includes(texto) ||
       p.categoria.toLowerCase().includes(texto);
     const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
-    return coincideBusqueda && coincideCategoria;
+    const coincideZona = zonaFiltro === 'todas' || p.zona === zonaFiltro;
+    return coincideBusqueda && coincideCategoria && coincideZona;
   });
 
   return (
@@ -302,8 +278,8 @@ export default function Usuarios() {
       <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
         {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Encontrá tu profesional</h1>
-          <p className="text-gray-400 text-lg">Buscá entre nuestros prestadores y contactalos por WhatsApp</p>
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Encontrá tu profesional</h1>
+          <p className="text-gray-400 text-sm sm:text-lg">Buscá entre nuestros prestadores y contactalos por WhatsApp</p>
           {!clienteDni && (
             <p className="text-[#e2b040] text-sm mt-2">
               <i className="ri-information-line mr-1"></i>
@@ -322,8 +298,8 @@ export default function Usuarios() {
         </div>
 
         {/* Filters */}
-        <div className="bg-[#16213e]/60 backdrop-blur-sm p-6 rounded-2xl border border-[#e2b040]/20 mb-8">
-          <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-[#16213e]/60 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border border-[#e2b040]/20 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 <i className="ri-search-line mr-1"></i>Buscar por nombre o descripción
@@ -348,6 +324,22 @@ export default function Usuarios() {
                 {categorias.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat === 'todas' ? 'Todas las categorías' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <i className="ri-map-pin-line mr-1"></i>Filtrar por zona
+              </label>
+              <select
+                value={zonaFiltro}
+                onChange={(e) => setZonaFiltro(e.target.value)}
+                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
+              >
+                {zonas.map((zona) => (
+                  <option key={zona} value={zona}>
+                    {zona === 'todas' ? 'Todas las zonas' : zona}
                   </option>
                 ))}
               </select>
@@ -384,7 +376,7 @@ export default function Usuarios() {
               </p>
             )}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {prestadoresFiltrados.map((prestador) => {
                 const vals = prestador.valoraciones || [];
                 const promedio = calcularPromedio(vals);
@@ -410,7 +402,7 @@ export default function Usuarios() {
                     </div>
 
                     <div className="p-5 flex flex-col flex-1">
-                      {/* Name + category */}
+                      {/* Name + category + zona */}
                       <div className="mb-3">
                         <h3 className="text-lg font-bold text-white mb-1">
                           {prestador.nombre} {prestador.apellido}
@@ -418,6 +410,12 @@ export default function Usuarios() {
                         <span className="inline-block px-3 py-1 bg-[#e2b040]/20 text-[#f0d080] rounded-full text-xs font-medium capitalize">
                           {prestador.categoria}
                         </span>
+                        {prestador.zona && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#1a1a2e] text-gray-400 rounded-full text-xs font-medium mt-1.5 ml-0 block w-fit">
+                            <i className="ri-map-pin-line"></i>
+                            {prestador.zona}
+                          </span>
+                        )}
                       </div>
 
                       {/* Rating */}

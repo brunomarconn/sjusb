@@ -14,7 +14,8 @@
       "Bash(npm run:*)",
       "Bash(where npm.cmd)",
       "Read(//c/Program Files/nodejs//**)",
-      "Bash(ls C:/Users/franc/OneDrive/Documentos/servicios/wrangler*)"
+      "Bash(ls C:/Users/franc/OneDrive/Documentos/servicios/wrangler*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

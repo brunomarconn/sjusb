@@ -63,7 +63,8 @@ serve(async (req: Request) => {
         prestadores (
           id,
           nombre,
-          apellido
+          apellido,
+          categoria
         )
       `)
       .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
@@ -112,6 +113,7 @@ serve(async (req: Request) => {
         orden_estado:            orden?.estado ?? '',
         prestador_nombre:        prestador?.nombre ?? '',
         prestador_apellido:      prestador?.apellido ?? '',
+        prestador_categoria:     prestador?.categoria ?? '',
       };
     });
 

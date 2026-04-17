@@ -60,12 +60,17 @@ interface ItemConversacionProps {
 }
 
 function ItemConversacion({ conv, activa, onClick, tipoUsuario }: ItemConversacionProps) {
-  const nombre     = `${conv.prestador_nombre} ${conv.prestador_apellido}`.trim() || 'Sin nombre';
-  const otroLabel  = tipoUsuario === 'cliente'
-    ? nombre
+  const nombre    = `${conv.prestador_nombre} ${conv.prestador_apellido}`.trim() || 'Sin nombre';
+  const categoria = conv.prestador_categoria || 'Prestador';
+
+  // Título principal y subtítulo varían según el tipo de usuario
+  const tituloPrincipal = tipoUsuario === 'cliente'
+    ? categoria.charAt(0).toUpperCase() + categoria.slice(1)
     : tipoUsuario === 'prestador'
       ? `Cliente ${conv.cliente_dni}`
       : `${nombre} / ${conv.cliente_dni}`;
+
+  const subtitulo = tipoUsuario === 'cliente' ? nombre : '';
 
   const preview = conv.ultimo_mensaje_contenido
     ? (conv.ultimo_mensaje_contenido.length > 55
@@ -93,11 +98,13 @@ function ItemConversacion({ conv, activa, onClick, tipoUsuario }: ItemConversaci
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className={`text-sm font-medium truncate ${activa ? 'text-[#e2b040]' : 'text-white'}`}>
-            {otroLabel}
+            {tituloPrincipal}
           </span>
           <span className="text-xs text-gray-500 flex-shrink-0">{hora}</span>
         </div>
-        <div className="text-xs text-gray-400 truncate mt-0.5">{conv.orden_titulo}</div>
+        {subtitulo && (
+          <div className="text-xs text-gray-400 truncate mt-0.5">{subtitulo}</div>
+        )}
         <div className="flex items-center justify-between mt-0.5">
           <span className={`text-xs truncate ${conv.no_leidos > 0 ? 'text-gray-300' : 'text-gray-500'}`}>
             {preview}
@@ -250,9 +257,16 @@ function PanelConversacion({
   }
 
   const titulo    = conversacion.orden_titulo ?? 'Conversación';
-  const otroNombre = identidad.tipo === 'cliente' || identidad.esAdmin
-    ? `Prestador`
-    : `Cliente`;
+  const categoria = conversacion.prestador_categoria;
+  const nombrePrestador = conversacion.prestador_nombre && conversacion.prestador_apellido
+    ? `${conversacion.prestador_nombre} ${conversacion.prestador_apellido}`.trim()
+    : null;
+  const headerTitulo = identidad.tipo === 'cliente' || identidad.esAdmin
+    ? (categoria ? categoria.charAt(0).toUpperCase() + categoria.slice(1) : 'Prestador')
+    : 'Cliente';
+  const headerSubtitulo = identidad.tipo === 'cliente' && nombrePrestador
+    ? `Consulta a ${nombrePrestador}`
+    : titulo;
 
   return (
     <div className="flex flex-col h-full">
@@ -273,8 +287,8 @@ function PanelConversacion({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white truncate">{otroNombre}</div>
-          <div className="text-xs text-gray-500 truncate">{titulo}</div>
+          <div className="text-sm font-medium text-white truncate">{headerTitulo}</div>
+          <div className="text-xs text-gray-500 truncate">{headerSubtitulo}</div>
         </div>
 
         {/* Link a la orden (solo si tiene orden) */}
@@ -477,7 +491,12 @@ export default function ChatPage() {
       const res = conv.orden_id
         ? await chatService.obtenerConversacion(conv.orden_id, auth(identidad))
         : await chatService.abrirConversacionPorId(conv.id, auth(identidad));
-      setConvActiva(res.conversacion);
+      setConvActiva({
+        ...res.conversacion,
+        prestador_nombre:    conv.prestador_nombre,
+        prestador_apellido:  conv.prestador_apellido,
+        prestador_categoria: conv.prestador_categoria,
+      });
       setMensajes(res.mensajes);
 
       // Actualizar no_leidos en la lista local

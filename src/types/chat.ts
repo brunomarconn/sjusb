@@ -33,6 +33,9 @@ export interface Conversacion {
   // Aplanados desde joins (presentes en chat-obtener)
   orden_titulo?: string;
   orden_estado?: string;
+  prestador_nombre?: string;
+  prestador_apellido?: string;
+  prestador_categoria?: string;
 }
 
 // ── Resumen para la lista de conversaciones ───────────────
@@ -52,6 +55,7 @@ export interface ConversacionResumen {
   orden_estado: string;
   prestador_nombre: string;
   prestador_apellido: string;
+  prestador_categoria: string;
 }
 
 // ── Respuestas de la API ───────────────────────────────────

@@ -145,7 +145,7 @@ export default function LoginPrestador({ onLoginExitoso, onIrRegistro }: LoginPr
           {mostrarOlvide && (
             <div className="bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-lg px-4 py-3 text-sm text-[#f0d080] flex items-start gap-2">
               <i className="ri-mail-line mt-0.5 shrink-0"></i>
-              <span>Contactanos a <strong>bbrunomarcon@gmail.com</strong> y te ayudamos a recuperar tu acceso.</span>
+              <span>Contactanos a <strong>mrsserviciossoluciones@gmail.com</strong> y te ayudamos a recuperar tu acceso.</span>
             </div>
           )}
 

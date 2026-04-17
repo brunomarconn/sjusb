@@ -44,6 +44,14 @@ const categorias = [
   'servicios de catering'
 ];
 
+const zonas = [
+  'Villa Allende',
+  'Rio Ceballos',
+  'Mendiolaza',
+  'Unquillo',
+  'Saldán',
+];
+
 export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelPrestadorProps) {
   const navigate = useNavigate();
   const [prestador, setPrestador] = useState<Prestador | null>(null);
@@ -56,6 +64,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     email: '',
     telefono: '',
     categoria: '',
+    zona: '',
     descripcion: '',
     foto: null as File | null
   });
@@ -66,8 +75,55 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
   const [guardandoDisp, setGuardandoDisp] = useState(false);
   const [dispGuardada, setDispGuardada] = useState(false);
 
+  const cargarDatos = async () => {
+      try {
+        // Cargar datos del prestador
+        const { data: prestadorInfo, error: prestadorError } = await supabase
+          .from('prestadores')
+          .select('*')
+          .eq('dni', prestadorData.dni)
+          .maybeSingle();
+
+        if (prestadorError) throw prestadorError;
+
+        if (prestadorInfo) {
+          setPrestador(prestadorInfo);
+          // Guardar UUID para el sistema de chat
+          localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
+          cargarDisponibilidad(prestadorInfo.id);
+          setFormData({
+            nombre: prestadorInfo.nombre,
+            apellido: prestadorInfo.apellido,
+            email: prestadorInfo.email,
+            telefono: prestadorInfo.telefono || '',
+            categoria: prestadorInfo.categoria,
+            zona: prestadorInfo.zona || '',
+            descripcion: prestadorInfo.descripcion,
+            foto: null
+          });
+          setFotoPreview(prestadorInfo.foto_url);
+
+          // Cargar valoraciones del prestador
+          const { data: valoracionesData, error: valoracionesError } = await supabase
+            .from('valoraciones')
+            .select('*')
+            .eq('prestador_id', prestadorInfo.id)
+            .order('created_at', { ascending: false });
+
+          if (valoracionesError) throw valoracionesError;
+
+          setValoraciones(valoracionesData || []);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
   useEffect(() => {
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prestadorData.dni]);
 
   const cargarDisponibilidad = async (prestadorId: string) => {
@@ -126,50 +182,6 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     }
   };
 
-  const cargarDatos = async () => {
-    try {
-      // Cargar datos del prestador
-      const { data: prestadorInfo, error: prestadorError } = await supabase
-        .from('prestadores')
-        .select('*')
-        .eq('dni', prestadorData.dni)
-        .maybeSingle();
-
-      if (prestadorError) throw prestadorError;
-
-      if (prestadorInfo) {
-        setPrestador(prestadorInfo);
-        // Guardar UUID para el sistema de chat
-        localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
-        cargarDisponibilidad(prestadorInfo.id);
-        setFormData({
-          nombre: prestadorInfo.nombre,
-          apellido: prestadorInfo.apellido,
-          email: prestadorInfo.email,
-          telefono: prestadorInfo.telefono || '',
-          categoria: prestadorInfo.categoria,
-          descripcion: prestadorInfo.descripcion,
-          foto: null
-        });
-        setFotoPreview(prestadorInfo.foto_url);
-
-        // Cargar valoraciones del prestador
-        const { data: valoracionesData, error: valoracionesError } = await supabase
-          .from('valoraciones')
-          .select('*')
-          .eq('prestador_id', prestadorInfo.id)
-          .order('created_at', { ascending: false });
-
-        if (valoracionesError) throw valoracionesError;
-
-        setValoraciones(valoracionesData || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -224,6 +236,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
           email: formData.email,
           telefono: formData.telefono,
           categoria: formData.categoria,
+          zona: formData.zona,
           descripcion: formData.descripcion,
           foto_url: fotoUrl
         })
@@ -335,6 +348,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                             email: prestador.email,
                             telefono: (prestador as any).telefono || '',
                             categoria: prestador.categoria,
+                            zona: (prestador as any).zona || '',
                             descripcion: prestador.descripcion,
                             foto: null
                           });
@@ -454,6 +468,26 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                     ) : (
                       <span className="inline-block px-4 py-2 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm font-semibold">
                         {formData.categoria}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-white text-sm font-semibold mb-2">Zona de Trabajo</label>
+                    {isEditing ? (
+                      <select
+                        name="zona"
+                        value={formData.zona}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-[#16213e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
+                      >
+                        {zonas.map(zona => (
+                          <option key={zona} value={zona}>{zona}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="inline-block px-4 py-2 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm font-semibold">
+                        {formData.zona || 'No especificada'}
                       </span>
                     )}
                   </div>

@@ -108,7 +108,7 @@ serve(async (req: Request) => {
 
       const { data: prestador } = await supabase
         .from('prestadores')
-        .select('nombre, apellido')
+        .select('nombre, apellido, categoria')
         .eq('id', conv.prestador_id)
         .maybeSingle();
 
@@ -119,8 +119,11 @@ serve(async (req: Request) => {
       return okResponse({
         conversacion: {
           ...conv,
-          orden_titulo: `Consulta a ${nombrePrestador}`,
-          orden_estado: '',
+          orden_titulo:        `Consulta a ${nombrePrestador}`,
+          orden_estado:        '',
+          prestador_nombre:    prestador?.nombre ?? '',
+          prestador_apellido:  prestador?.apellido ?? '',
+          prestador_categoria: prestador?.categoria ?? '',
         },
         mensajes,
       });
@@ -148,7 +151,7 @@ serve(async (req: Request) => {
 
       const { data: prestador, error: prestadorError } = await supabase
         .from('prestadores')
-        .select('id, nombre, apellido')
+        .select('id, nombre, apellido, categoria')
         .eq('id', prestadorDestinoId)
         .single();
 
@@ -184,8 +187,11 @@ serve(async (req: Request) => {
       return okResponse({
         conversacion: {
           ...(await marcarLeido(conv as ConversacionRow)),
-          orden_titulo: `Consulta a ${`${prestador.nombre} ${prestador.apellido}`.trim()}`,
-          orden_estado: '',
+          orden_titulo:        `Consulta a ${`${prestador.nombre} ${prestador.apellido}`.trim()}`,
+          orden_estado:        '',
+          prestador_nombre:    prestador.nombre,
+          prestador_apellido:  prestador.apellido,
+          prestador_categoria: prestador.categoria ?? '',
         },
         mensajes: await cargarMensajes(conv.id),
       });
