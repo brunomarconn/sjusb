@@ -161,8 +161,7 @@ const servicios = [
     nombre: 'Servicios de Catering',
     categoria: 'servicios de catering',
     icono: 'ri-restaurant-2-line',
-    imagen:
-      'images/serviciosdecatering.png',
+    imagen: 'images/serviciosdecatering.png',
   },
 ];
 
@@ -171,39 +170,47 @@ const pasos = [
     numero: '01',
     icono: 'ri-search-eye-line',
     titulo: 'Buscá tu servicio',
-    descripcion:
-      'Explorá las categorías disponibles y encontrá el profesional que necesitás en segundos.',
+    descripcion: 'Explorá las categorías disponibles y encontrá el profesional que necesitás en segundos.',
     color: 'from-[#e2b040]/20 to-[#e2b040]/5',
   },
   {
     numero: '02',
     icono: 'ri-user-star-line',
     titulo: 'Elegí tu prestador',
-    descripcion:
-      'Revisá perfiles, valoraciones y experiencia de cada profesional verificado.',
+    descripcion: 'Revisá perfiles, valoraciones y experiencia de cada profesional verificado.',
     color: 'from-[#e2b040]/20 to-[#e2b040]/5',
   },
   {
     numero: '03',
     icono: 'ri-whatsapp-line',
     titulo: 'Contactá por WhatsApp',
-    descripcion:
-      'Coordiná directamente con el prestador de forma rápida y sin intermediarios.',
+    descripcion: 'Coordiná directamente con el prestador de forma rápida y sin intermediarios.',
     color: 'from-[#e2b040]/20 to-[#e2b040]/5',
   },
   {
     numero: '04',
     icono: 'ri-star-smile-line',
     titulo: 'Valorá la experiencia',
-    descripcion:
-      'Dejá tu opinión y ayudá a otros usuarios a elegir el mejor profesional.',
+    descripcion: 'Dejá tu opinión y ayudá a otros usuarios a elegir el mejor profesional.',
     color: 'from-[#e2b040]/20 to-[#e2b040]/5',
   },
+];
+
+const chipsPopulares = [
+  { label: 'Jardinero', cat: 'jardinero' },
+  { label: 'Plomero', cat: 'plomero' },
+  { label: 'Electricista', cat: 'electricista' },
+  { label: 'Gasista', cat: 'gasista' },
+  { label: 'Pintor', cat: 'pintor' },
+  { label: 'Albañil', cat: 'albañil' },
+  { label: 'Peluquería Canina', cat: 'peluquería canina' },
 ];
 
 export default function Inicio() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+
   useEffect(() => {
     const handleScroll = () => {
       try {
@@ -221,6 +228,15 @@ export default function Inicio() {
     navigate(`/usuarios?categoria=${encodeURIComponent(categoria)}`);
   };
 
+  const handleBusqueda = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busqueda.trim()) {
+      navigate(`/usuarios?q=${encodeURIComponent(busqueda.trim())}`);
+    } else {
+      navigate('/usuarios');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
       {/* Header */}
@@ -230,7 +246,7 @@ export default function Inicio() {
         onQuienesSomos={() => document.getElementById('quienes-somos')?.scrollIntoView({ behavior: 'smooth' })}
       />
 
-      {/* Hero Section */}
+      {/* ── Hero ── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 w-full h-full">
           <video
@@ -245,49 +261,63 @@ export default function Inicio() {
           <div className="absolute inset-0 bg-gradient-to-tr from-[#e2b040]/10 via-transparent to-transparent"></div>
         </div>
 
-        <div className="relative w-full max-w-5xl mx-auto text-center px-6 pt-24 pb-6">
-          <div className="mb-4">
+        <div className="relative w-full max-w-3xl mx-auto text-center px-6 pt-24 pb-6">
+          {/* Badge */}
+          <div className="mb-5">
             <span className="inline-block px-4 py-1 bg-[#e2b040]/20 border border-[#e2b040]/40 text-[#e2b040] rounded-full text-sm font-semibold tracking-widest uppercase">
-              Plataforma de Servicios
+              Prestadores verificados · Córdoba
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-            Conectamos servicios<br />
-            <span className="text-[#e2b040]">con quienes los necesitan</span>
+          {/* Title */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
+            ¿Qué servicio<br />
+            <span className="text-[#e2b040]">necesitás?</span>
           </h1>
 
-          <p className="text-gray-300 text-sm sm:text-base md:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
-            Nuestra plataforma conecta usuarios con prestadores de servicios, facilitando el contacto y promoviendo transparencia, eficiencia y buenos resultados.
+          <p className="text-gray-300 text-sm sm:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
+            Buscá prestadores verificados en Córdoba y contactalos por WhatsApp.
           </p>
 
-          {/* Call‑to‑action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 w-full max-w-sm sm:max-w-none mx-auto">
+          {/* Search bar */}
+          <form onSubmit={handleBusqueda} className="flex gap-2 max-w-xl mx-auto mb-5">
+            <div className="flex-1 relative">
+              <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar servicio, prestador, zona..."
+                className="w-full pl-11 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-[#e2b040]/40 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-[#e2b040] transition-colors text-base"
+              />
+            </div>
             <button
-              onClick={() => navigate('/mi-cuenta')}
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#e2b040] text-[#1a1a2e] rounded-full font-bold text-base hover:bg-[#f0d080] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-[#e2b040]/30 cursor-pointer"
+              type="submit"
+              className="px-6 py-4 bg-[#e2b040] text-[#1a1a2e] rounded-2xl font-bold hover:bg-[#f0d080] transition-all shadow-lg shadow-[#e2b040]/30 cursor-pointer whitespace-nowrap"
             >
-              <i className="ri-user-line"></i>
-              Soy Usuario
+              Buscar
             </button>
-            <button
-              onClick={() => navigate('/prestadores')}
-              className="w-full sm:w-auto px-8 py-3.5 bg-transparent border-2 border-[#e2b040] text-[#e2b040] rounded-full font-bold text-base hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <i className="ri-briefcase-line"></i>
-              Soy Prestador
-            </button>
-          </div>
+          </form>
 
-          {/* Points banner */}
-          <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e2b040]/10 border border-[#e2b040]/30 rounded-full text-xs sm:text-sm text-[#f0d080] mb-4 max-w-xs sm:max-w-none text-center">
-            <i className="ri-medal-line text-[#e2b040] shrink-0"></i>
-            <span>Acumulá puntos y obtené un <strong>10% de descuento</strong> en tus servicios</span>
+          {/* Quick chips */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {chipsPopulares.map((chip) => (
+              <button
+                key={chip.cat}
+                onClick={() => navigate(`/usuarios?categoria=${encodeURIComponent(chip.cat)}`)}
+                className="px-4 py-2 bg-white/10 border border-white/20 text-white rounded-full text-sm font-medium hover:bg-[#e2b040]/20 hover:border-[#e2b040]/60 hover:text-[#f0d080] transition-all cursor-pointer"
+              >
+                {chip.label}
+              </button>
+            ))}
           </div>
 
           {/* Scroll indicator */}
-          <div className="mt-4 flex flex-col items-center animate-bounce cursor-pointer" onClick={() => document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })}>
-            <span className="text-gray-300 text-xs tracking-widest uppercase mb-2">Descubrí los servicios</span>
+          <div
+            className="flex flex-col items-center animate-bounce cursor-pointer"
+            onClick={() => document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <span className="text-gray-400 text-xs tracking-widest uppercase mb-2">Todos los servicios</span>
             <div className="w-10 h-10 flex items-center justify-center border border-[#e2b040]/40 rounded-full">
               <i className="ri-arrow-down-line text-[#e2b040] text-xl"></i>
             </div>
@@ -295,7 +325,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      {/* Services Grid */}
+      {/* ── Services Grid ── */}
       <section id="servicios" className="py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 text-center">
@@ -335,7 +365,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      {/* How it works — rediseñado */}
+      {/* ── How it works ── */}
       <section id="como-funciona" className="py-14 sm:py-20 px-4 sm:px-6 bg-[#16213e]/50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
@@ -350,24 +380,20 @@ export default function Inicio() {
             </p>
           </div>
 
-          {/* Pasos en grid responsive */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10 sm:mb-16">
             {pasos.map((paso, idx) => (
               <div
                 key={paso.numero}
                 className="relative bg-gradient-to-b from-[#1a1a2e]/90 to-[#16213e]/80 rounded-2xl border border-[#e2b040]/25 p-4 sm:p-7 flex flex-col items-center text-center hover:border-[#e2b040]/70 hover:scale-[1.03] transition-all duration-300 group"
               >
-                {/* Conector entre pasos (solo desktop) */}
                 {idx < pasos.length - 1 && (
                   <div className="hidden lg:block absolute top-10 -right-3 z-10">
                     <i className="ri-arrow-right-line text-[#e2b040]/40 text-xl"></i>
                   </div>
                 )}
-                {/* Número */}
                 <span className="text-[#e2b040]/20 text-6xl font-black absolute top-3 right-4 leading-none select-none">
                   {paso.numero}
                 </span>
-                {/* Ícono */}
                 <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center bg-[#e2b040]/15 border border-[#e2b040]/30 rounded-2xl mb-3 sm:mb-5 group-hover:bg-[#e2b040]/25 transition-colors">
                   <i className={`${paso.icono} text-[#e2b040] text-2xl sm:text-3xl`}></i>
                 </div>
@@ -377,9 +403,7 @@ export default function Inicio() {
             ))}
           </div>
 
-          {/* Imagen ilustrativa mejorada */}
           <div className="rounded-3xl overflow-hidden border border-[#e2b040]/20 shadow-2xl shadow-[#e2b040]/10 flex flex-col md:flex-row">
-            {/* Imagen — siempre visible, altura fija en mobile */}
             <div className="w-full md:w-1/2 h-52 md:h-auto flex-shrink-0 overflow-hidden">
               <img
                 src="https://readdy.ai/api/search-image?query=diverse%20team%20of%20professional%20service%20workers%20plumber%20electrician%20painter%20gardener%20standing%20together%20smiling%20confident%20uniforms%20tools%20dark%20studio%20background%20warm%20golden%20accent%20lighting%20professional%20corporate%20photography&width=1200&height=480&seq=como_funciona_team_v2&orientation=landscape"
@@ -387,7 +411,6 @@ export default function Inicio() {
                 className="w-full h-full object-cover object-top"
               />
             </div>
-            {/* Contenido — siempre abajo en mobile, a la derecha en desktop */}
             <div className="flex-1 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-6 md:p-10 flex flex-col justify-center">
               <h3 className="text-xl md:text-3xl font-bold text-white mb-3">
                 Profesionales <span className="text-[#e2b040]">verificados</span> y confiables
@@ -407,7 +430,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      {/* About us */}
+      {/* ── About us ── */}
       <section id="quienes-somos" className="py-14 sm:py-20 px-6 bg-[#1a1a2e]">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
@@ -433,9 +456,7 @@ export default function Inicio() {
                 Para que vos te enfoques en tu trabajo
               </p>
               <p className="text-gray-300 text-base mb-8 leading-relaxed">
-                Nuestra plataforma conecta usuarios con prestadores de
-                servicios, facilitando el contacto y promoviendo
-                transparencia, eficiencia y buenos resultados.
+                Nuestra plataforma conecta usuarios con prestadores de servicios, facilitando el contacto y promoviendo transparencia, eficiencia y buenos resultados.
               </p>
 
               <div className="space-y-4 sm:space-y-6">
@@ -462,7 +483,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className="bg-[#0f1628] pt-12 sm:pt-16 pb-0 px-6 border-t border-[#e2b040]/20">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 pb-12">

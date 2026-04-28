@@ -44,10 +44,21 @@ const zonas = [
   'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',
 ];
 
-// IDs de prestadores con quienes se reservó (para validar valoraciones)
+const otrosServicios = [
+  { label: 'Plomero', cat: 'plomero' },
+  { label: 'Electricista', cat: 'electricista' },
+  { label: 'Pintor', cat: 'pintor' },
+  { label: 'Gasista', cat: 'gasista' },
+  { label: 'Albañil', cat: 'albañil' },
+  { label: 'Jardinero', cat: 'jardinero' },
+  { label: 'Peluquería Canina', cat: 'peluquería canina' },
+  { label: 'Personal Trainer', cat: 'personal trainer' },
+  { label: 'Carpintero', cat: 'carpintero' },
+  { label: 'Piletero', cat: 'piletero' },
+];
+
 const RESERVADOS_KEY = 'mservicios_reservados';
 
-// Llamado desde la página de reserva cuando se completa la reserva
 // eslint-disable-next-line react-refresh/only-export-components
 export function marcarReservado(prestadorId: string) {
   const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
@@ -62,26 +73,26 @@ function yaReservo(prestadorId: string): boolean {
   return reservados.includes(prestadorId);
 }
 
-function marcarContactado(prestadorId: string) {
-  const key = 'mservicios_contactados';
-  const contactados: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-  if (!contactados.includes(prestadorId)) {
-    contactados.push(prestadorId);
-    localStorage.setItem(key, JSON.stringify(contactados));
-  }
+function getTituloCategoria(cat: string): string {
+  if (cat === 'todas') return 'Encontrá tu profesional';
+  const nombre = cat.charAt(0).toUpperCase() + cat.slice(1);
+  return `${nombre} disponibles en Córdoba`;
+}
+
+function getMensajeCantidad(count: number): string {
+  if (count === 1) return 'Te mostramos el mejor resultado disponible';
+  if (count <= 3) return `${count} prestadores disponibles en tu zona`;
+  return `${count} prestadores disponibles`;
 }
 
 export default function Usuarios() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
-  const [busqueda, setBusqueda] = useState('');
-  const [categoriaFiltro, setCategoriaFiltro] = useState(() => {
-    return searchParams.get('categoria') || 'todas';
-  });
-  const [zonaFiltro, setZonaFiltro] = useState(() => {
-    return searchParams.get('zona') || 'todas';
-  });
+  const [busqueda, setBusqueda] = useState(() => searchParams.get('q') || '');
+  const [categoriaFiltro, setCategoriaFiltro] = useState(() => searchParams.get('categoria') || 'todas');
+  const [zonaFiltro, setZonaFiltro] = useState(() => searchParams.get('zona') || 'todas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -94,10 +105,6 @@ export default function Usuarios() {
   const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarValoraciones, setMostrarValoraciones] = useState<string | null>(null);
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
-
-  // Modal: mensaje sin cuenta
-  const [mostrarModalMensaje, setMostrarModalMensaje] = useState(false);
-  const [prestadorPendienteMensaje, setPrestadorPendienteMensaje] = useState<Prestador | null>(null);
 
   const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
@@ -134,7 +141,6 @@ export default function Usuarios() {
         .order('created_at', { ascending: false });
 
       if (err) throw err;
-
       if (data && data.length > 0) {
         setPrestadores(data as Prestador[]);
       } else {
@@ -165,7 +171,6 @@ export default function Usuarios() {
       };
     });
 
-
   const handleValorar = (prestador: Prestador) => {
     if (!clienteDni) {
       if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) {
@@ -173,12 +178,10 @@ export default function Usuarios() {
       }
       return;
     }
-
     if (!yaReservo(prestador.id)) {
       alert('Solo podés valorar a un prestador con quien hayas hecho una reserva.');
       return;
     }
-
     setPrestadorSeleccionado(prestador);
     setMostrarModalValoracion(true);
     setPuntuacion(5);
@@ -188,7 +191,6 @@ export default function Usuarios() {
 
   const handleEnviarValoracion = async () => {
     if (!prestadorSeleccionado || !nombreCliente.trim() || !comentario.trim()) return;
-
     setEnviandoValoracion(true);
     try {
       const { error: insertError } = await supabase
@@ -200,7 +202,6 @@ export default function Usuarios() {
           puntuacion,
           comentario: comentario.trim()
         }]);
-
       if (insertError) throw insertError;
 
       const nuevaValoracion: Valoracion = {
@@ -212,7 +213,6 @@ export default function Usuarios() {
         comentario: comentario.trim(),
         created_at: new Date().toISOString()
       };
-
       setPrestadores((prev) =>
         prev.map((p) =>
           p.id === prestadorSeleccionado.id
@@ -220,7 +220,6 @@ export default function Usuarios() {
             : p
         )
       );
-
       setMostrarModalValoracion(false);
       setPrestadorSeleccionado(null);
       setMensajeExito('¡Valoración enviada con éxito!');
@@ -242,9 +241,7 @@ export default function Usuarios() {
     return [1, 2, 3, 4, 5].map((s) => (
       <i
         key={s}
-        className={`${size} ${
-          s <= Math.round(promedio) ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'
-        }`}
+        className={`${size} ${s <= Math.round(promedio) ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'}`}
       ></i>
     ));
   };
@@ -256,18 +253,20 @@ export default function Usuarios() {
       p.nombre.toLowerCase().includes(texto) ||
       p.apellido.toLowerCase().includes(texto) ||
       p.descripcion.toLowerCase().includes(texto) ||
-      p.categoria.toLowerCase().includes(texto);
+      p.categoria.toLowerCase().includes(texto) ||
+      (p.zona || '').toLowerCase().includes(texto);
     const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
-    const coincideZona = zonaFiltro === 'todas' || p.zona === zonaFiltro;
+    const coincideZona = zonaFiltro === 'todas' || (p.zona || '').includes(zonaFiltro);
     return coincideBusqueda && coincideCategoria && coincideZona;
   });
 
+  const tituloCategoria = getTituloCategoria(categoriaFiltro);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
-      {/* Header */}
       <AppHeader puntosUsuario={puntosUsuario} />
 
-      {/* Success toast */}
+      {/* Toast */}
       {mensajeExito && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-8 py-4 rounded-xl shadow-2xl backdrop-blur-sm flex items-center gap-3 animate-fade-in whitespace-nowrap">
           <i className="ri-checkbox-circle-fill text-xl"></i>
@@ -276,19 +275,11 @@ export default function Usuarios() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
-        {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Encontrá tu profesional</h1>
-          <p className="text-gray-400 text-sm sm:text-lg">Buscá entre nuestros prestadores y contactalos por WhatsApp</p>
-          {!clienteDni && (
-            <p className="text-[#e2b040] text-sm mt-2">
-              <i className="ri-information-line mr-1"></i>
-              <button onClick={() => navigate('/mi-cuenta')} className="underline cursor-pointer hover:text-[#f0d080]">
-                Iniciá sesión
-              </button>{' '}
-              para acumular puntos y obtener descuentos
-            </p>
-          )}
+
+        {/* ── Header del listado ── */}
+        <div className="mb-7">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{tituloCategoria}</h1>
+          <p className="text-gray-400 text-sm">Prestadores verificados listos para contactar por WhatsApp.</p>
           {clienteDni && puntosUsuario !== null && puntosUsuario >= 5 && (
             <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-full text-green-400 text-sm font-semibold">
               <i className="ri-gift-2-line"></i>
@@ -297,49 +288,46 @@ export default function Usuarios() {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="bg-[#16213e]/60 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border border-[#e2b040]/20 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <i className="ri-search-line mr-1"></i>Buscar por nombre o descripción
-              </label>
+        {/* ── Filtros ── */}
+        <div className="bg-[#16213e]/60 backdrop-blur-sm p-4 rounded-2xl border border-[#e2b040]/20 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search — protagonista */}
+            <div className="flex-1 relative">
+              <i className="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
               <input
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Ej: electricista, jardinero, Juan..."
+                className="w-full pl-10 pr-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
+                placeholder="Buscar por nombre, servicio, zona..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <i className="ri-filter-line mr-1"></i>Filtrar por categoría
-              </label>
-              <select
-                value={categoriaFiltro}
-                onChange={(e) => setCategoriaFiltro(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
-              >
-                {categorias.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat === 'todas' ? 'Todas las categorías' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <i className="ri-map-pin-line mr-1"></i>Filtrar por zona
-              </label>
+
+            {/* Zona */}
+            <div className="sm:w-44">
               <select
                 value={zonaFiltro}
                 onChange={(e) => setZonaFiltro(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
+                className="w-full px-3 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
               >
                 {zonas.map((zona) => (
                   <option key={zona} value={zona}>
                     {zona === 'todas' ? 'Todas las zonas' : zona}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Categoría — secundaria */}
+            <div className="sm:w-52">
+              <select
+                value={categoriaFiltro}
+                onChange={(e) => setCategoriaFiltro(e.target.value)}
+                className="w-full px-3 py-3 bg-[#1a1a2e] border border-[#e2b040]/20 rounded-xl text-gray-400 focus:outline-none focus:border-[#e2b040]/50 transition-colors text-sm cursor-pointer"
+              >
+                {categorias.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === 'todas' ? 'Todas las categorías' : cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </option>
                 ))}
               </select>
@@ -367,12 +355,13 @@ export default function Usuarios() {
           </div>
         )}
 
-        {/* Providers grid */}
+        {/* ── Grid de prestadores ── */}
         {!loading && !error && (
           <>
+            {/* Cantidad amigable */}
             {prestadoresFiltrados.length > 0 && (
-              <p className="text-gray-400 text-sm mb-4">
-                {prestadoresFiltrados.length} prestador{prestadoresFiltrados.length !== 1 ? 'es' : ''} encontrado{prestadoresFiltrados.length !== 1 ? 's' : ''}
+              <p className="text-gray-400 text-sm mb-5">
+                {getMensajeCantidad(prestadoresFiltrados.length)}
               </p>
             )}
 
@@ -384,11 +373,12 @@ export default function Usuarios() {
                 const puedeValorar = clienteDni && yaReservo(prestador.id);
 
                 return (
-                  <div key={prestador.id}
-                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col">
-
-                    {/* Photo */}
-                    <div className="w-full h-56 overflow-hidden relative">
+                  <div
+                    key={prestador.id}
+                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col"
+                  >
+                    {/* Foto */}
+                    <div className="w-full h-52 overflow-hidden relative">
                       <img
                         src={prestador.foto_url}
                         alt={`${prestador.nombre} ${prestador.apellido}`}
@@ -399,93 +389,74 @@ export default function Usuarios() {
                         }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent"></div>
+                      {/* Verificado badge */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold text-green-400 border border-green-400/30">
+                        <i className="ri-shield-check-fill text-xs"></i>
+                        Verificado
+                      </div>
                     </div>
 
-                    <div className="p-5 flex flex-col flex-1">
-                      {/* Name + category + zona */}
-                      <div className="mb-3">
-                        <h3 className="text-lg font-bold text-white mb-1">
-                          {prestador.nombre} {prestador.apellido}
-                        </h3>
-                        <span className="inline-block px-3 py-1 bg-[#e2b040]/20 text-[#f0d080] rounded-full text-xs font-medium capitalize">
-                          {prestador.categoria}
-                        </span>
-                        {prestador.zona && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#1a1a2e] text-gray-400 rounded-full text-xs font-medium mt-1.5 ml-0 block w-fit">
-                            <i className="ri-map-pin-line"></i>
-                            {prestador.zona}
-                          </span>
-                        )}
-                      </div>
+                    <div className="p-4 flex flex-col flex-1">
+                      {/* Nombre */}
+                      <h3 className="text-lg font-bold text-white mb-0.5">
+                        {prestador.nombre} {prestador.apellido}
+                      </h3>
 
-                      {/* Rating */}
+                      {/* Categoría · Zona */}
+                      <p className="text-sm mb-3">
+                        <span className="text-[#f0d080] font-medium capitalize">{prestador.categoria}</span>
+                        {prestador.zona && (
+                          <span className="text-gray-500"> · {prestador.zona}</span>
+                        )}
+                      </p>
+
+                      {/* Estrellas */}
                       {vals.length > 0 && (
                         <div className="flex items-center gap-2 mb-3">
                           <div className="flex">{renderEstrellas(promedio, true)}</div>
                           <span className="text-[#e2b040] text-sm font-semibold">{promedio.toFixed(1)}</span>
-                          <span className="text-gray-500 text-xs">({vals.length} valorac{vals.length !== 1 ? 'iones' : 'ión'})</span>
+                          <span className="text-gray-500 text-xs">· {vals.length} trabajo{vals.length !== 1 ? 's' : ''}</span>
                         </div>
                       )}
 
-                      {/* Description */}
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-3 flex-1">{prestador.descripcion}</p>
+                      {/* Descripción */}
+                      <p className="text-gray-400 text-sm mb-4 line-clamp-2 flex-1">{prestador.descripcion}</p>
 
-                      {/* Action buttons */}
-                      <div className="space-y-2">
-                        {/* Botón Reservar */}
-                        <button
-                          onClick={() => navigate(`/reservar/${prestador.id}`)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#e2b040] hover:bg-[#f0d080] text-[#1a1a2e] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
-                        >
-                          <i className="ri-calendar-check-line text-lg"></i>
-                          Reservar turno
-                        </button>
+                      {/* Botón principal — Contactar por WhatsApp */}
+                      <button
+                        onClick={() => navigate(`/reservar/${prestador.id}`)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20"
+                      >
+                        <i className="ri-whatsapp-line text-lg"></i>
+                        Contactar por WhatsApp
+                      </button>
 
-                        {/* Botón Enviar mensaje (siempre visible) */}
-                        <button
-                          onClick={() => {
-                            if (!clienteDni) {
-                              setPrestadorPendienteMensaje(prestador);
-                              setMostrarModalMensaje(true);
-                              return;
-                            }
-                            marcarContactado(prestador.id);
-                            navigate(`/chat?prestador=${prestador.id}`);
-                          }}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-transparent border border-[#e2b040]/40 hover:bg-[#e2b040]/10 text-[#e2b040] rounded-xl font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
-                        >
-                          <i className="ri-chat-3-line text-lg"></i>
-                          Enviar mensaje
-                        </button>
-
-                        {/* Rate button */}
-                        <button
-                          onClick={() => handleValorar(prestador)}
-                          disabled={!puedeValorar}
-                          title={!clienteDni ? 'Iniciá sesión para valorar' : !puedeValorar ? 'Solo podés valorar prestadores que hayas contactado' : ''}
-                          className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-                            puedeValorar
-                              ? 'bg-[#e2b040]/10 border border-[#e2b040]/30 text-[#e2b040] hover:bg-[#e2b040]/20 cursor-pointer'
-                              : 'bg-gray-800/50 border border-gray-700/30 text-gray-600 cursor-not-allowed'
-                          }`}
-                        >
-                          <i className="ri-star-line"></i>
-                          {puedeValorar ? 'Dejar Valoración' : 'Reservá primero para valorar'}
-                        </button>
-
-                        {/* Show reviews toggle */}
-                        {vals.length > 0 && (
+                      {/* Acciones secundarias */}
+                      <div className="flex items-center justify-between pt-1">
+                        {vals.length > 0 ? (
                           <button
                             onClick={() => setMostrarValoraciones(expandido ? null : prestador.id)}
-                            className="w-full text-center text-gray-400 hover:text-[#e2b040] text-xs py-1 transition-colors cursor-pointer"
+                            className="text-gray-500 hover:text-[#e2b040] text-xs transition-colors cursor-pointer"
                           >
-                            {expandido ? 'Ocultar valoraciones' : `Ver ${vals.length} valorac${vals.length !== 1 ? 'iones' : 'ión'}`}
+                            {expandido
+                              ? 'Ocultar opiniones'
+                              : `Ver ${vals.length} opinión${vals.length !== 1 ? 'es' : ''}`}
                             <i className={`ml-1 ${expandido ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}`}></i>
+                          </button>
+                        ) : (
+                          <span className="text-gray-600 text-xs italic">Sin opiniones aún</span>
+                        )}
+                        {puedeValorar && (
+                          <button
+                            onClick={() => handleValorar(prestador)}
+                            className="text-[#e2b040]/70 hover:text-[#e2b040] text-xs transition-colors cursor-pointer flex items-center gap-1 ml-auto"
+                          >
+                            <i className="ri-star-line"></i>Valorar
                           </button>
                         )}
                       </div>
 
-                      {/* Reviews list */}
+                      {/* Valoraciones expandidas */}
                       {expandido && vals.length > 0 && (
                         <div className="mt-4 space-y-3 border-t border-[#e2b040]/10 pt-4">
                           {vals.slice(0, 3).map((v) => (
@@ -508,26 +479,53 @@ export default function Usuarios() {
               })}
             </div>
 
-            {prestadoresFiltrados.length === 0 && !loading && (
-              <div className="text-center py-20">
+            {/* Sin resultados */}
+            {prestadoresFiltrados.length === 0 && (
+              <div className="text-center py-16">
                 <i className="ri-search-line text-5xl text-gray-600 mb-4 block"></i>
-                <p className="text-gray-400 text-lg mb-2">No se encontraron prestadores</p>
-                <p className="text-gray-500 text-sm mb-6">Probá con otros términos de búsqueda o una categoría diferente</p>
-                {(busqueda || categoriaFiltro !== 'todas') && (
+                <p className="text-gray-400 text-lg mb-2">No encontramos prestadores con ese filtro</p>
+                <p className="text-gray-500 text-sm mb-6">Próximamente más opciones en tu zona</p>
+                {(busqueda || categoriaFiltro !== 'todas' || zonaFiltro !== 'todas') && (
                   <button
-                    onClick={() => { setBusqueda(''); setCategoriaFiltro('todas'); }}
-                    className="mt-4 px-5 py-2 border border-[#e2b040]/40 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
+                    onClick={() => { setBusqueda(''); setCategoriaFiltro('todas'); setZonaFiltro('todas'); }}
+                    className="px-5 py-2 border border-[#e2b040]/40 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
                   >
                     Limpiar filtros
                   </button>
                 )}
               </div>
             )}
+
+            {/* ── Otros servicios ── */}
+            <div className="mt-16 pt-10 border-t border-[#e2b040]/10">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-bold text-white mb-1">Otros servicios que te pueden interesar</h3>
+                <p className="text-gray-500 text-sm">Explorá más categorías disponibles</p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {otrosServicios
+                  .filter((s) => s.cat !== categoriaFiltro)
+                  .map((s) => (
+                    <button
+                      key={s.cat}
+                      onClick={() => {
+                        setCategoriaFiltro(s.cat);
+                        setBusqueda('');
+                        setZonaFiltro('todas');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="px-4 py-2 bg-[#16213e]/60 border border-[#e2b040]/20 text-gray-300 rounded-full text-sm hover:border-[#e2b040]/60 hover:text-[#f0d080] transition-all cursor-pointer"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+              </div>
+            </div>
           </>
         )}
       </div>
 
-      {/* Rating Modal */}
+      {/* ── Modal de valoración ── */}
       {mostrarModalValoracion && prestadorSeleccionado && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
           <div className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[90vh] overflow-y-auto">
@@ -545,7 +543,6 @@ export default function Usuarios() {
                   placeholder="Ej: María G."
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Puntuación</label>
                 <div className="flex gap-2">
@@ -556,7 +553,6 @@ export default function Usuarios() {
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Comentario</label>
                 <textarea
@@ -580,50 +576,6 @@ export default function Usuarios() {
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviandoValoracion ? 'Enviando...' : 'Enviar valoración'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: registrate para enviar mensajes */}
-      {mostrarModalMensaje && prestadorPendienteMensaje && (
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          onClick={() => setMostrarModalMensaje(false)}
-        >
-          <div
-            className="bg-[#16213e] rounded-2xl p-8 max-w-sm w-full border border-[#e2b040]/20"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mx-auto mb-5">
-              <i className="ri-chat-3-line text-3xl text-[#e2b040]" />
-            </div>
-            <h3 className="text-xl font-bold text-white text-center mb-2">
-              Registrate para enviar mensajes
-            </h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              Necesitás tener una cuenta para chatear con{' '}
-              <span className="text-white font-semibold">
-                {prestadorPendienteMensaje.nombre} {prestadorPendienteMensaje.apellido}
-              </span>.
-              ¡Además acumulás puntos y obtenés descuentos!
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  localStorage.setItem('mservicios_pending_chat', prestadorPendienteMensaje.id);
-                  navigate('/mi-cuenta');
-                }}
-                className="w-full py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold hover:bg-[#f0d080] transition-colors cursor-pointer"
-              >
-                Registrarme / Iniciar sesión
-              </button>
-              <button
-                onClick={() => setMostrarModalMensaje(false)}
-                className="w-full py-2.5 bg-transparent border border-white/10 text-gray-400 rounded-xl text-sm hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                Cancelar
               </button>
             </div>
           </div>
