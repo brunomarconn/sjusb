@@ -70,6 +70,15 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
   });
   const [fotoPreview, setFotoPreview] = useState<string>('');
 
+  // ── Zonas de trabajo ─────────────────────────────────────
+  const [zonasSeleccionadas, setZonasSeleccionadas] = useState<string[]>([]);
+  const [zonaPersonalizada, setZonaPersonalizada] = useState('');
+
+  // ── Galería multimedia ────────────────────────────────────
+  const [galeriaActual, setGaleriaActual] = useState<string[]>([]);
+  const [galeriaNew, setGaleriaNew] = useState<File[]>([]);
+  const [galeriaNuevoPreviews, setGaleriaNuevoPreviews] = useState<{ url: string; esVideo: boolean }[]>([]);
+
   // ── Disponibilidad ────────────────────────────────────────
   const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
   const [guardandoDisp, setGuardandoDisp] = useState(false);
@@ -102,6 +111,12 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
             foto: null
           });
           setFotoPreview(prestadorInfo.foto_url);
+          setZonasSeleccionadas(
+            prestadorInfo.zona
+              ? prestadorInfo.zona.split(',').map((z: string) => z.trim()).filter(Boolean)
+              : []
+          );
+          setGaleriaActual(prestadorInfo.galeria_urls || []);
 
           // Cargar valoraciones del prestador
           const { data: valoracionesData, error: valoracionesError } = await supabase
@@ -200,6 +215,47 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     }
   };
 
+  const toggleZona = (zona: string) => {
+    setZonasSeleccionadas(prev =>
+      prev.includes(zona) ? prev.filter(z => z !== zona) : [...prev, zona]
+    );
+  };
+
+  const agregarZonaPersonalizada = () => {
+    const z = zonaPersonalizada.trim();
+    if (!z || zonasSeleccionadas.includes(z)) return;
+    setZonasSeleccionadas(prev => [...prev, z]);
+    setZonaPersonalizada('');
+  };
+
+  const quitarZona = (zona: string) => {
+    setZonasSeleccionadas(prev => prev.filter(z => z !== zona));
+  };
+
+  const esVideoUrl = (url: string) =>
+    /\.(mp4|mov|avi|webm|mkv|ogv)(\?.*)?$/i.test(url);
+
+  const handleGaleriaNuevaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      setGaleriaNew(prev => [...prev, file]);
+      setGaleriaNuevoPreviews(prev => [...prev, { url, esVideo: file.type.startsWith('video/') }]);
+    });
+    e.target.value = '';
+  };
+
+  const removeGaleriaActual = (index: number) => {
+    setGaleriaActual(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeGaleriaNueva = (index: number) => {
+    URL.revokeObjectURL(galeriaNuevoPreviews[index].url);
+    setGaleriaNew(prev => prev.filter((_, i) => i !== index));
+    setGaleriaNuevoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!prestador) return;
 
@@ -227,6 +283,23 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
         }
       }
 
+      // Subir nuevos archivos de galería
+      const nuevasUrls: string[] = [];
+      for (const file of galeriaNew) {
+        const ext = file.name.split('.').pop();
+        const galeriaPath = `prestadores/galeria/${prestador.dni}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const { error: galeriaErr } = await supabase.storage
+          .from('fotos-prestadores')
+          .upload(galeriaPath, file);
+        if (!galeriaErr) {
+          const { data: galeriaUrlData } = supabase.storage
+            .from('fotos-prestadores')
+            .getPublicUrl(galeriaPath);
+          nuevasUrls.push(galeriaUrlData.publicUrl);
+        }
+      }
+      const galeriaFinal = [...galeriaActual, ...nuevasUrls];
+
       // Actualizar datos del prestador
       const { error: updateError } = await supabase
         .from('prestadores')
@@ -236,14 +309,17 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
           email: formData.email,
           telefono: formData.telefono,
           categoria: formData.categoria,
-          zona: formData.zona,
+          zona: zonasSeleccionadas.join(', '),
           descripcion: formData.descripcion,
-          foto_url: fotoUrl
+          foto_url: fotoUrl,
+          galeria_urls: galeriaFinal.length > 0 ? galeriaFinal : null
         })
         .eq('dni', prestador.dni);
 
       if (updateError) throw updateError;
 
+      setGaleriaNew([]);
+      setGaleriaNuevoPreviews([]);
       await cargarDatos();
       setIsEditing(false);
       alert('Perfil actualizado correctamente');
@@ -353,6 +429,15 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                             foto: null
                           });
                           setFotoPreview(prestador.foto_url);
+                          setZonasSeleccionadas(
+                            prestador.zona
+                              ? prestador.zona.split(',').map((z: string) => z.trim()).filter(Boolean)
+                              : []
+                          );
+                          setZonaPersonalizada('');
+                          setGaleriaActual(prestador.galeria_urls || []);
+                          setGaleriaNew([]);
+                          setGaleriaNuevoPreviews([]);
                         }}
                         className="px-4 py-2 bg-transparent border border-[#e2b040] text-[#e2b040] rounded-lg hover:bg-[#e2b040] hover:text-[#1a1a2e] transition-all duration-300 whitespace-nowrap cursor-pointer text-sm"
                       >
@@ -473,22 +558,85 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                   </div>
 
                   <div>
-                    <label className="block text-white text-sm font-semibold mb-2">Zona de Trabajo</label>
+                    <label className="block text-white text-sm font-semibold mb-2">
+                      Zona de Trabajo
+                      {isEditing && <span className="text-gray-500 text-xs ml-2 font-normal">(podés elegir varias)</span>}
+                    </label>
                     {isEditing ? (
-                      <select
-                        name="zona"
-                        value={formData.zona}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 bg-[#16213e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
-                      >
-                        {zonas.map(zona => (
-                          <option key={zona} value={zona}>{zona}</option>
-                        ))}
-                      </select>
+                      <div className="bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg p-3 space-y-3">
+                        {/* Chips predefinidos */}
+                        <div className="flex flex-wrap gap-2">
+                          {zonas.map(zona => {
+                            const activa = zonasSeleccionadas.includes(zona);
+                            return (
+                              <button
+                                key={zona}
+                                type="button"
+                                onClick={() => toggleZona(zona)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                                  activa
+                                    ? 'bg-[#e2b040] text-[#1a1a2e]'
+                                    : 'bg-[#16213e] border border-[#e2b040]/30 text-gray-400 hover:border-[#e2b040] hover:text-gray-200'
+                                }`}
+                              >
+                                {activa && <i className="ri-check-line text-xs"></i>}
+                                {zona}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Input zona personalizada */}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={zonaPersonalizada}
+                            onChange={e => setZonaPersonalizada(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarZonaPersonalizada(); } }}
+                            placeholder="Otra zona (escribí y presioná +)"
+                            className="flex-1 px-3 py-2 bg-[#16213e] border border-[#e2b040]/20 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#e2b040] transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={agregarZonaPersonalizada}
+                            className="px-3 py-2 bg-[#e2b040]/20 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/30 transition-colors cursor-pointer text-sm"
+                          >
+                            <i className="ri-add-line"></i>
+                          </button>
+                        </div>
+
+                        {/* Zonas seleccionadas */}
+                        {zonasSeleccionadas.length > 0 && (
+                          <div className="pt-2 border-t border-[#e2b040]/10 flex flex-wrap gap-2">
+                            {zonasSeleccionadas.map(zona => (
+                              <span key={zona} className="flex items-center gap-1 px-3 py-1 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm">
+                                <i className="ri-map-pin-line text-xs"></i>
+                                {zona}
+                                <button
+                                  type="button"
+                                  onClick={() => quitarZona(zona)}
+                                  className="ml-1 hover:text-red-400 transition-colors cursor-pointer"
+                                >
+                                  <i className="ri-close-line text-xs"></i>
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <span className="inline-block px-4 py-2 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm font-semibold">
-                        {formData.zona || 'No especificada'}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {zonasSeleccionadas.length > 0 ? (
+                          zonasSeleccionadas.map(zona => (
+                            <span key={zona} className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm font-semibold">
+                              <i className="ri-map-pin-line text-xs"></i>
+                              {zona}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm italic">No especificada</span>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -506,6 +654,115 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                       <p className="text-gray-300 text-base leading-relaxed">{formData.descripcion}</p>
                     )}
                   </div>
+
+                  {/* Fotos / Videos del trabajo */}
+                  <div>
+                    <label className="block text-white text-sm font-semibold mb-2">
+                      Fotos / Videos del Trabajo
+                      {!isEditing && galeriaActual.length > 0 && (
+                        <span className="text-gray-500 text-xs ml-2 font-normal">(clic para abrir)</span>
+                      )}
+                    </label>
+
+                    {/* Vista normal */}
+                    {!isEditing && (
+                      galeriaActual.length > 0 ? (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {galeriaActual.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                              className="relative aspect-square rounded-lg overflow-hidden border border-[#e2b040]/20 bg-[#16213e] group"
+                            >
+                              {esVideoUrl(url) ? (
+                                <video src={url} className="w-full h-full object-cover" muted />
+                              ) : (
+                                <img src={url} alt={`Trabajo ${i + 1}`} className="w-full h-full object-cover" />
+                              )}
+                              {esVideoUrl(url) && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <i className="ri-play-circle-fill text-white text-3xl opacity-60"></i>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <i className="ri-zoom-in-line text-white text-xl"></i>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm italic">Sin fotos ni videos cargados aún</p>
+                      )
+                    )}
+
+                    {/* Vista edición */}
+                    {isEditing && (
+                      <div className="space-y-3">
+                        {galeriaActual.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">Actuales — × para eliminar</p>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                              {galeriaActual.map((url, i) => (
+                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-[#e2b040]/20 bg-[#1a1a2e]">
+                                  {esVideoUrl(url) ? (
+                                    <video src={url} className="w-full h-full object-cover" muted />
+                                  ) : (
+                                    <img src={url} alt={`Trabajo ${i + 1}`} className="w-full h-full object-cover" />
+                                  )}
+                                  {esVideoUrl(url) && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                      <i className="ri-play-circle-fill text-white text-2xl opacity-60"></i>
+                                    </div>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeGaleriaActual(i)}
+                                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-500 transition-colors cursor-pointer"
+                                  >
+                                    <i className="ri-close-line"></i>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {galeriaNuevoPreviews.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">Nuevos para agregar</p>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                              {galeriaNuevoPreviews.map((item, i) => (
+                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-[#e2b040]/40 bg-[#1a1a2e]">
+                                  {item.esVideo ? (
+                                    <video src={item.url} className="w-full h-full object-cover" muted />
+                                  ) : (
+                                    <img src={item.url} alt={`Nuevo ${i + 1}`} className="w-full h-full object-cover" />
+                                  )}
+                                  {item.esVideo && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                      <i className="ri-play-circle-fill text-white text-2xl opacity-60"></i>
+                                    </div>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeGaleriaNueva(i)}
+                                    className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-500 transition-colors cursor-pointer"
+                                  >
+                                    <i className="ri-close-line"></i>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <label className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a2e] border border-dashed border-[#e2b040]/30 rounded-lg text-gray-400 hover:border-[#e2b040] hover:text-gray-300 transition-colors cursor-pointer text-sm w-full">
+                          <i className="ri-image-add-line text-lg"></i>
+                          Agregar fotos o videos
+                          <input type="file" accept="image/*,video/*" multiple onChange={handleGaleriaNuevaChange} className="hidden" />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             </div>

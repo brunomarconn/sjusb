@@ -7,8 +7,6 @@ interface RegistroPrestadorProps {
   onVolverLogin: () => void;
 }
 
-const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
-
 const categorias = [
   'electricista', 'jardinero', 'piletero', 'albañil', 'bicicletero',
   'pintor', 'gasista', 'plomero', 'forrajería', 'peluquería canina',
@@ -28,19 +26,20 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
     nombre: '',
     apellido: '',
     dni: '',
+    confirmarDni: '',
     email: '',
-    password: '',
-    confirmarPassword: '',
     telefono: '',
     categoria: '',
-    zona: '',
     descripcion: ''
   });
+  const [zonasSeleccionadas, setZonasSeleccionadas] = useState<string[]>([]);
+  const [zonaPersonalizada, setZonaPersonalizada] = useState('');
   const [foto, setFoto] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState<string>('');
+  const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
+  const [galeriaPreviews, setGaleriaPreviews] = useState<{ url: string; esVideo: boolean }[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -56,6 +55,40 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
     }
   };
 
+  const toggleZona = (zona: string) => {
+    setZonasSeleccionadas(prev =>
+      prev.includes(zona) ? prev.filter(z => z !== zona) : [...prev, zona]
+    );
+  };
+
+  const agregarZonaPersonalizada = () => {
+    const z = zonaPersonalizada.trim();
+    if (!z || zonasSeleccionadas.includes(z)) return;
+    setZonasSeleccionadas(prev => [...prev, z]);
+    setZonaPersonalizada('');
+  };
+
+  const quitarZona = (zona: string) => {
+    setZonasSeleccionadas(prev => prev.filter(z => z !== zona));
+  };
+
+  const handleGaleriaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      setGaleriaFiles(prev => [...prev, file]);
+      setGaleriaPreviews(prev => [...prev, { url, esVideo: file.type.startsWith('video/') }]);
+    });
+    e.target.value = '';
+  };
+
+  const removeGaleriaItem = (index: number) => {
+    URL.revokeObjectURL(galeriaPreviews[index].url);
+    setGaleriaFiles(prev => prev.filter((_, i) => i !== index));
+    setGaleriaPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -65,28 +98,23 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
       return;
     }
 
+    if (!formData.dni.trim()) {
+      setError('El DNI es obligatorio');
+      return;
+    }
+
+    if (formData.dni.trim() !== formData.confirmarDni.trim()) {
+      setError('Los DNI ingresados no coinciden');
+      return;
+    }
+
     if (!formData.categoria) {
       setError('Seleccioná una categoría');
       return;
     }
 
-    if (!formData.zona) {
-      setError('Seleccioná una zona de trabajo');
-      return;
-    }
-
-    if (formData.password.length < 5) {
-      setError('La contraseña debe tener al menos 5 caracteres');
-      return;
-    }
-
-    if (!soloLetrasYNumeros.test(formData.password)) {
-      setError('La contraseña no puede tener caracteres especiales');
-      return;
-    }
-
-    if (formData.password !== formData.confirmarPassword) {
-      setError('Las contraseñas no coinciden');
+    if (zonasSeleccionadas.length === 0) {
+      setError('Seleccioná al menos una zona de trabajo');
       return;
     }
 
@@ -128,18 +156,36 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
         fotoUrl = urlData.publicUrl;
       }
 
+      // Subir archivos de galería (opcionales)
+      const galeriaUrls: string[] = [];
+      for (const file of galeriaFiles) {
+        const ext = file.name.split('.').pop();
+        const galeriaPath = `prestadores/galeria/${formData.dni}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const { error: galeriaErr } = await supabase.storage
+          .from('fotos-prestadores')
+          .upload(galeriaPath, file);
+        if (!galeriaErr) {
+          const { data: galeriaUrlData } = supabase.storage
+            .from('fotos-prestadores')
+            .getPublicUrl(galeriaPath);
+          galeriaUrls.push(galeriaUrlData.publicUrl);
+        }
+      }
+
       const { error: insertError } = await supabase
         .from('prestadores')
         .insert([{
           nombre: formData.nombre,
           apellido: formData.apellido,
           dni: formData.dni,
-          email: formData.email,
-          password: formData.password,
+          email: formData.email || null,
+          password: formData.dni,
           telefono: formData.telefono,
           categoria: formData.categoria,
+          zona: zonasSeleccionadas.join(', '),
           foto_url: fotoUrl,
-          descripcion: formData.descripcion
+          descripcion: formData.descripcion,
+          galeria_urls: galeriaUrls.length > 0 ? galeriaUrls : null
         }]);
 
       if (insertError) throw insertError;
@@ -226,23 +272,48 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">DNI <span className="text-red-400">*</span></label>
-              <input
-                type="text" name="dni" value={formData.dni} onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="Número de DNI" required
-              />
+          {/* DNI — usado como usuario y contraseña */}
+          <div className="bg-[#e2b040]/5 border border-[#e2b040]/20 rounded-xl p-4 space-y-4">
+            <div className="flex items-start gap-2">
+              <i className="ri-shield-keyhole-line text-[#e2b040] mt-0.5 shrink-0"></i>
+              <p className="text-sm text-[#f0d080]">
+                Tu <strong>DNI</strong> será tu <strong>usuario y contraseña</strong> para ingresar al sistema. No necesitás recordar nada más.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email <span className="text-red-400">*</span></label>
-              <input
-                type="email" name="email" value={formData.email} onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="tu@email.com" required
-              />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  DNI <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text" name="dni" value={formData.dni} onChange={handleChange}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Número de DNI" required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Confirmar DNI <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text" name="confirmarDni" value={formData.confirmarDni} onChange={handleChange}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Repetí tu DNI" required
+                />
+              </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Email
+              <span className="text-gray-500 text-xs ml-2">(opcional)</span>
+            </label>
+            <input
+              type="email" name="email" value={formData.email} onChange={handleChange}
+              className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+              placeholder="tu@email.com"
+            />
           </div>
 
           <div>
@@ -256,34 +327,6 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
                 type="tel" name="telefono" value={formData.telefono} onChange={handleChange}
                 className="flex-1 px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-r-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
                 placeholder="1123456789" required
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Contraseña <span className="text-red-400">*</span>
-                <span className="text-gray-500 text-xs ml-1">(mín. 5, sin símbolos)</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={mostrarPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange}
-                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors pr-10"
-                  placeholder="Mínimo 5 caracteres" required
-                />
-                <button type="button" onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2b040] cursor-pointer">
-                  <i className={mostrarPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Confirmar contraseña <span className="text-red-400">*</span></label>
-              <input
-                type={mostrarPassword ? 'text' : 'password'} name="confirmarPassword" value={formData.confirmarPassword} onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="Repetí la contraseña" required
               />
             </div>
           </div>
@@ -303,17 +346,71 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Zona de Trabajo <span className="text-red-400">*</span></label>
-            <select
-              name="zona" value={formData.zona} onChange={handleChange}
-              className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white focus:outline-none focus:border-[#e2b040] transition-colors cursor-pointer"
-              required
-            >
-              <option value="">Seleccioná tu zona de trabajo</option>
-              {zonas.map((zona) => (
-                <option key={zona} value={zona}>{zona}</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Zona de Trabajo <span className="text-red-400">*</span>
+              <span className="text-gray-500 text-xs ml-2 font-normal">(podés elegir varias)</span>
+            </label>
+            <div className="bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg p-3 space-y-3">
+              {/* Chips predefinidos */}
+              <div className="flex flex-wrap gap-2">
+                {zonas.map(zona => {
+                  const activa = zonasSeleccionadas.includes(zona);
+                  return (
+                    <button
+                      key={zona}
+                      type="button"
+                      onClick={() => toggleZona(zona)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                        activa
+                          ? 'bg-[#e2b040] text-[#1a1a2e]'
+                          : 'bg-[#16213e] border border-[#e2b040]/30 text-gray-400 hover:border-[#e2b040] hover:text-gray-200'
+                      }`}
+                    >
+                      {activa && <i className="ri-check-line text-xs"></i>}
+                      {zona}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Input zona personalizada */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={zonaPersonalizada}
+                  onChange={e => setZonaPersonalizada(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarZonaPersonalizada(); } }}
+                  placeholder="Otra zona (escribí y presioná +)"
+                  className="flex-1 px-3 py-2 bg-[#16213e] border border-[#e2b040]/20 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#e2b040] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={agregarZonaPersonalizada}
+                  className="px-3 py-2 bg-[#e2b040]/20 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/30 transition-colors cursor-pointer text-sm"
+                >
+                  <i className="ri-add-line"></i>
+                </button>
+              </div>
+
+              {/* Zonas seleccionadas */}
+              {zonasSeleccionadas.length > 0 && (
+                <div className="pt-2 border-t border-[#e2b040]/10 flex flex-wrap gap-2">
+                  {zonasSeleccionadas.map(zona => (
+                    <span key={zona} className="flex items-center gap-1 px-3 py-1 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm">
+                      <i className="ri-map-pin-line text-xs"></i>
+                      {zona}
+                      <button
+                        type="button"
+                        onClick={() => quitarZona(zona)}
+                        className="ml-1 hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        <i className="ri-close-line text-xs"></i>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -323,6 +420,48 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
               className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors resize-none"
               rows={4} placeholder="Describí tu servicio, experiencia y especialidades..." required
             />
+          </div>
+
+          {/* Galería multimedia (opcional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Fotos / Videos del trabajo
+              <span className="text-gray-500 text-xs ml-2">(opcional)</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Podés agregar fotos o videos de trabajos anteriores, certificados, flyers, etc.
+            </p>
+            <label className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a2e] border border-dashed border-[#e2b040]/30 rounded-lg text-gray-400 hover:border-[#e2b040] hover:text-gray-300 transition-colors cursor-pointer text-sm w-full">
+              <i className="ri-image-add-line text-lg"></i>
+              Agregar fotos o videos
+              <input type="file" accept="image/*,video/*" multiple onChange={handleGaleriaChange} className="hidden" />
+            </label>
+
+            {galeriaPreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {galeriaPreviews.map((item, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-[#e2b040]/20 bg-[#1a1a2e]">
+                    {item.esVideo ? (
+                      <video src={item.url} className="w-full h-full object-cover" muted />
+                    ) : (
+                      <img src={item.url} alt={`Trabajo ${i + 1}`} className="w-full h-full object-cover" />
+                    )}
+                    {item.esVideo && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <i className="ri-play-circle-fill text-white text-3xl opacity-60"></i>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeGaleriaItem(i)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-500 transition-colors cursor-pointer"
+                    >
+                      <i className="ri-close-line"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button

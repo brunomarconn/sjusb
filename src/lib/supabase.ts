@@ -20,6 +20,7 @@ export interface Prestador {
   categoria: string;
   foto_url: string;
   descripcion: string;
+  galeria_urls?: string[] | null;
   created_at: string;
 }
 
