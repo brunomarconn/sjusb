@@ -39,10 +39,52 @@ const categorias = [
   'maestro particular', 'servicios de catering',
 ];
 
-const zonas = [
-  'todas',
-  'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',
+const todasLasZonas = [
+  'Sierras Chicas',
+  'Villa Allende',
+  'Río Ceballos',
+  'Mendiolaza',
+  'Unquillo',
+  'Saldán',
+  'La Calera',
+  'Dumesnil',
+  'Córdoba Capital',
+  'Córdoba Centro',
+  'Córdoba y alrededores',
+  'Malagueño',
+  'Colonia Caroya',
+  'Jesús María',
+  'Monte Cristo',
+  'Cosquín',
+  'La Falda',
+  'Carlos Paz',
 ];
+
+const SIERRAS_CHICAS_TOWNS = [
+  'villa allende', 'río ceballos', 'rio ceballos',
+  'mendiolaza', 'unquillo', 'saldán', 'saldan',
+  'la calera', 'dumesnil', 'sierras chicas',
+];
+
+function matchesZona(prestadorZona: string, filtro: string): boolean {
+  if (!filtro.trim()) return true;
+  const zona = prestadorZona.toLowerCase();
+  const f = filtro.toLowerCase().trim();
+
+  if (zona.includes(f)) return true;
+
+  // Prestador tiene "Sierras Chicas" y el usuario busca una ciudad miembro
+  if (zona.includes('sierras chicas') && SIERRAS_CHICAS_TOWNS.some(t => t !== 'sierras chicas' && t.includes(f))) {
+    return true;
+  }
+
+  // Usuario busca "Sierras Chicas" y el prestador está en alguna ciudad miembro
+  if (f.includes('sierra') && SIERRAS_CHICAS_TOWNS.some(t => zona.includes(t))) {
+    return true;
+  }
+
+  return false;
+}
 
 const otrosServicios = [
   { label: 'Plomero', cat: 'plomero' },
@@ -92,7 +134,10 @@ export default function Usuarios() {
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [busqueda, setBusqueda] = useState(() => searchParams.get('q') || '');
   const [categoriaFiltro, setCategoriaFiltro] = useState(() => searchParams.get('categoria') || 'todas');
-  const [zonaFiltro, setZonaFiltro] = useState(() => searchParams.get('zona') || 'todas');
+  const [zonaInput, setZonaInput] = useState('');
+  const [mostrarSugerenciasZona, setMostrarSugerenciasZona] = useState(false);
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [expandedDesc, setExpandedDesc] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -117,14 +162,10 @@ export default function Usuarios() {
   const cargarPuntosUsuario = async () => {
     if (!clienteDni) return;
     try {
-      const { data } = await supabase
-        .from('clientes')
-        .select('puntos')
-        .eq('dni', clienteDni)
-        .maybeSingle();
+      const { data } = await supabase.from('clientes').select('puntos').eq('dni', clienteDni).maybeSingle();
       if (data) setPuntosUsuario(data.puntos);
-    } catch (error) {
-      console.error('Error al cargar puntos del usuario:', error);
+    } catch (e) {
+      console.error('Error al cargar puntos:', e);
     }
   };
 
@@ -134,10 +175,8 @@ export default function Usuarios() {
     try {
       const { data, error: err } = await supabase
         .from('prestadores')
-        .select(`
-          id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
-          valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )
-        `)
+        .select(`id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
+          valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`)
         .order('created_at', { ascending: false });
 
       if (err) throw err;
@@ -171,11 +210,17 @@ export default function Usuarios() {
       };
     });
 
+  const toggleDesc = (id: string) => {
+    setExpandedDesc((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const handleValorar = (prestador: Prestador) => {
     if (!clienteDni) {
-      if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) {
-        navigate('/mi-cuenta');
-      }
+      if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) navigate('/mi-cuenta');
       return;
     }
     if (!yaReservo(prestador.id)) {
@@ -193,15 +238,13 @@ export default function Usuarios() {
     if (!prestadorSeleccionado || !nombreCliente.trim() || !comentario.trim()) return;
     setEnviandoValoracion(true);
     try {
-      const { error: insertError } = await supabase
-        .from('valoraciones')
-        .insert([{
-          prestador_id: prestadorSeleccionado.id,
-          cliente_email: clienteDni || 'anonimo',
-          nombre_cliente: nombreCliente.trim(),
-          puntuacion,
-          comentario: comentario.trim()
-        }]);
+      const { error: insertError } = await supabase.from('valoraciones').insert([{
+        prestador_id: prestadorSeleccionado.id,
+        cliente_email: clienteDni || 'anonimo',
+        nombre_cliente: nombreCliente.trim(),
+        puntuacion,
+        comentario: comentario.trim()
+      }]);
       if (insertError) throw insertError;
 
       const nuevaValoracion: Valoracion = {
@@ -213,13 +256,11 @@ export default function Usuarios() {
         comentario: comentario.trim(),
         created_at: new Date().toISOString()
       };
-      setPrestadores((prev) =>
-        prev.map((p) =>
-          p.id === prestadorSeleccionado.id
-            ? { ...p, valoraciones: [nuevaValoracion, ...(p.valoraciones || [])] }
-            : p
-        )
-      );
+      setPrestadores((prev) => prev.map((p) =>
+        p.id === prestadorSeleccionado.id
+          ? { ...p, valoraciones: [nuevaValoracion, ...(p.valoraciones || [])] }
+          : p
+      ));
       setMostrarModalValoracion(false);
       setPrestadorSeleccionado(null);
       setMensajeExito('¡Valoración enviada con éxito!');
@@ -232,19 +273,20 @@ export default function Usuarios() {
   };
 
   const calcularPromedio = (vals: Valoracion[] = []) => {
-    if (vals.length === 0) return 0;
+    if (!vals.length) return 0;
     return vals.reduce((acc, v) => acc + v.puntuacion, 0) / vals.length;
   };
 
-  const renderEstrellas = (promedio: number, small = false) => {
-    const size = small ? 'text-sm' : 'text-base';
-    return [1, 2, 3, 4, 5].map((s) => (
-      <i
-        key={s}
-        className={`${size} ${s <= Math.round(promedio) ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'}`}
-      ></i>
+  const renderEstrellas = (promedio: number, small = false) =>
+    [1, 2, 3, 4, 5].map((s) => (
+      <i key={s} className={`${small ? 'text-sm' : 'text-base'} ${s <= Math.round(promedio) ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'}`}></i>
     ));
-  };
+
+  const sugerenciasZona = todasLasZonas.filter(
+    (z) => !zonaInput.trim() || z.toLowerCase().includes(zonaInput.toLowerCase())
+  ).slice(0, 7);
+
+  const hayFiltrosExtra = zonaInput || categoriaFiltro !== 'todas';
 
   const prestadoresFiltrados = prestadores.filter((p) => {
     const texto = busqueda.toLowerCase();
@@ -256,11 +298,9 @@ export default function Usuarios() {
       p.categoria.toLowerCase().includes(texto) ||
       (p.zona || '').toLowerCase().includes(texto);
     const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
-    const coincideZona = zonaFiltro === 'todas' || (p.zona || '').includes(zonaFiltro);
+    const coincideZona = matchesZona(p.zona || '', zonaInput);
     return coincideBusqueda && coincideCategoria && coincideZona;
   });
-
-  const tituloCategoria = getTituloCategoria(categoriaFiltro);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
@@ -268,62 +308,115 @@ export default function Usuarios() {
 
       {/* Toast */}
       {mensajeExito && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-8 py-4 rounded-xl shadow-2xl backdrop-blur-sm flex items-center gap-3 animate-fade-in whitespace-nowrap">
-          <i className="ri-checkbox-circle-fill text-xl"></i>
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-6 py-3 rounded-xl shadow-2xl backdrop-blur-sm flex items-center gap-2 animate-fade-in whitespace-nowrap text-sm">
+          <i className="ri-checkbox-circle-fill text-lg"></i>
           {mensajeExito}
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 pt-20 sm:pt-24">
 
-        {/* ── Header del listado ── */}
-        <div className="mb-7">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{tituloCategoria}</h1>
+        {/* Header del listado */}
+        <div className="mb-5 sm:mb-7">
+          <h1 className="text-xl sm:text-3xl font-bold text-white mb-1">{getTituloCategoria(categoriaFiltro)}</h1>
           <p className="text-gray-400 text-sm">Prestadores verificados listos para contactar por WhatsApp.</p>
           {clienteDni && puntosUsuario !== null && puntosUsuario >= 5 && (
-            <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-full text-green-400 text-sm font-semibold">
+            <div className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-green-500/20 border border-green-500/40 rounded-full text-green-400 text-xs sm:text-sm font-semibold">
               <i className="ri-gift-2-line"></i>
-              ¡Tenés 10% de descuento disponible! Al próximo contacto se canjea automáticamente.
+              ¡Tenés 10% de descuento disponible!
             </div>
           )}
         </div>
 
         {/* ── Filtros ── */}
-        <div className="bg-[#16213e]/60 backdrop-blur-sm p-4 rounded-2xl border border-[#e2b040]/20 mb-8">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search — protagonista */}
+        <div className="bg-[#16213e]/60 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-[#e2b040]/20 mb-6 sm:mb-8">
+
+          {/* Fila principal: búsqueda + botón de filtros (mobile) */}
+          <div className="flex gap-2">
             <div className="flex-1 relative">
               <i className="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
               <input
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
-                placeholder="Buscar por nombre, servicio, zona..."
+                className="w-full pl-10 pr-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                placeholder="Buscar servicio, nombre, zona..."
+                style={{ fontSize: '16px' }}
+                autoComplete="off"
               />
             </div>
 
-            {/* Zona */}
-            <div className="sm:w-44">
-              <select
-                value={zonaFiltro}
-                onChange={(e) => setZonaFiltro(e.target.value)}
-                className="w-full px-3 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white focus:outline-none focus:border-[#e2b040] transition-colors text-sm cursor-pointer"
-              >
-                {zonas.map((zona) => (
-                  <option key={zona} value={zona}>
-                    {zona === 'todas' ? 'Todas las zonas' : zona}
-                  </option>
-                ))}
-              </select>
+            {/* Botón "Filtros" — solo visible en mobile */}
+            <button
+              className={`sm:hidden relative flex items-center gap-1.5 px-3 py-3 rounded-xl border transition-colors cursor-pointer min-w-[72px] justify-center ${
+                filtrosAbiertos || hayFiltrosExtra
+                  ? 'bg-[#e2b040]/10 border-[#e2b040]/50 text-[#e2b040]'
+                  : 'bg-[#1a1a2e] border-[#e2b040]/30 text-gray-400'
+              }`}
+              onClick={() => setFiltrosAbiertos((v) => !v)}
+              aria-label="Filtros adicionales"
+            >
+              <i className="ri-filter-3-line text-base"></i>
+              <span className="text-xs font-semibold">Filtros</span>
+              {/* Punto indicador de filtro activo */}
+              {hayFiltrosExtra && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#e2b040] rounded-full"></span>
+              )}
+            </button>
+          </div>
+
+          {/* Filtros adicionales: siempre en desktop, toggle en mobile */}
+          <div className={`gap-3 mt-3 ${filtrosAbiertos ? 'flex flex-col' : 'hidden'} sm:flex sm:flex-row`}>
+
+            {/* Zona — autocompletado */}
+            <div className="flex-1 sm:flex-none sm:w-52 relative">
+              <i className="ri-map-pin-line absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"></i>
+              <input
+                type="text"
+                value={zonaInput}
+                onChange={(e) => { setZonaInput(e.target.value); setMostrarSugerenciasZona(true); }}
+                onFocus={() => setMostrarSugerenciasZona(true)}
+                onBlur={() => setTimeout(() => setMostrarSugerenciasZona(false), 150)}
+                placeholder="Buscar zona..."
+                className="w-full pl-9 pr-8 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                style={{ fontSize: '16px' }}
+                autoComplete="off"
+              />
+              {zonaInput && (
+                <button
+                  onClick={() => setZonaInput('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white cursor-pointer z-10 p-1"
+                  aria-label="Limpiar zona"
+                >
+                  <i className="ri-close-line text-sm"></i>
+                </button>
+              )}
+              {mostrarSugerenciasZona && sugerenciasZona.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#16213e] border border-[#e2b040]/20 rounded-xl shadow-2xl z-30 overflow-hidden max-h-56 overflow-y-auto">
+                  {sugerenciasZona.map((z) => (
+                    <button
+                      key={z}
+                      onMouseDown={() => { setZonaInput(z); setMostrarSugerenciasZona(false); }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#e2b040]/10 hover:text-[#f0d080] transition-colors flex items-center gap-2 cursor-pointer min-h-[48px]"
+                    >
+                      <i className="ri-map-pin-line text-[#e2b040]/50 shrink-0 text-sm"></i>
+                      <span className="flex-1">{z}</span>
+                      {z === 'Sierras Chicas' && (
+                        <span className="text-[#e2b040]/40 text-xs">macro-zona</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Categoría — secundaria */}
-            <div className="sm:w-52">
+            {/* Categoría */}
+            <div className="flex-1 sm:flex-none sm:w-52">
               <select
                 value={categoriaFiltro}
                 onChange={(e) => setCategoriaFiltro(e.target.value)}
-                className="w-full px-3 py-3 bg-[#1a1a2e] border border-[#e2b040]/20 rounded-xl text-gray-400 focus:outline-none focus:border-[#e2b040]/50 transition-colors text-sm cursor-pointer"
+                className="w-full px-3 py-3 bg-[#1a1a2e] border border-[#e2b040]/20 rounded-xl text-gray-400 focus:outline-none focus:border-[#e2b040]/50 transition-colors cursor-pointer"
+                style={{ fontSize: '16px' }}
               >
                 {categorias.map((cat) => (
                   <option key={cat} value={cat}>
@@ -339,28 +432,30 @@ export default function Usuarios() {
         {loading && (
           <div className="text-center py-20">
             <div className="inline-block w-12 h-12 border-4 border-[#e2b040]/30 border-t-[#e2b040] rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-400">Cargando prestadores...</p>
+            <p className="text-gray-400 text-sm">Cargando prestadores...</p>
           </div>
         )}
 
         {/* Error */}
         {!loading && error && (
           <div className="text-center py-12">
-            <i className="ri-error-warning-line text-5xl text-red-400 mb-4 block"></i>
-            <p className="text-red-400 text-lg mb-4">{error}</p>
-            <button onClick={cargarPrestadores}
-              className="px-6 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-lg font-semibold hover:bg-[#f0d080] transition-colors cursor-pointer whitespace-nowrap">
-              Reintentar
+            <i className="ri-wifi-off-line text-5xl text-red-400 mb-4 block"></i>
+            <p className="text-red-400 text-base mb-2 font-semibold">No pudimos cargar los prestadores</p>
+            <p className="text-gray-500 text-sm mb-5">Verificá tu conexión e intentá de nuevo</p>
+            <button
+              onClick={cargarPrestadores}
+              className="min-h-[48px] px-6 py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-semibold hover:bg-[#f0d080] transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <i className="ri-refresh-line mr-2"></i>Intentar de nuevo
             </button>
           </div>
         )}
 
-        {/* ── Grid de prestadores ── */}
+        {/* Grid de prestadores */}
         {!loading && !error && (
           <>
-            {/* Cantidad amigable */}
             {prestadoresFiltrados.length > 0 && (
-              <p className="text-gray-400 text-sm mb-5">
+              <p className="text-gray-400 text-sm mb-4">
                 {getMensajeCantidad(prestadoresFiltrados.length)}
               </p>
             )}
@@ -371,25 +466,27 @@ export default function Usuarios() {
                 const promedio = calcularPromedio(vals);
                 const expandido = mostrarValoraciones === prestador.id;
                 const puedeValorar = clienteDni && yaReservo(prestador.id);
+                const descExpandida = expandedDesc.has(prestador.id);
 
                 return (
                   <div
                     key={prestador.id}
-                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col"
+                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col"
                   >
                     {/* Foto */}
-                    <div className="w-full h-52 overflow-hidden relative">
+                    <div className="w-full h-52 sm:h-60 overflow-hidden relative">
                       <img
                         src={prestador.foto_url}
                         alt={`${prestador.nombre} ${prestador.apellido}`}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-cover object-center"
+                        loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             'https://readdy.ai/api/search-image?query=professional+service+worker+portrait+neutral+background&width=400&height=300&seq=fallback01&orientation=portrait';
                         }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent"></div>
-                      {/* Verificado badge */}
+                      {/* Verificado */}
                       <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold text-green-400 border border-green-400/30">
                         <i className="ri-shield-check-fill text-xs"></i>
                         Verificado
@@ -398,12 +495,12 @@ export default function Usuarios() {
 
                     <div className="p-4 flex flex-col flex-1">
                       {/* Nombre */}
-                      <h3 className="text-lg font-bold text-white mb-0.5">
+                      <h3 className="text-base sm:text-lg font-bold text-white mb-0.5 leading-snug">
                         {prestador.nombre} {prestador.apellido}
                       </h3>
 
                       {/* Categoría · Zona */}
-                      <p className="text-sm mb-3">
+                      <p className="text-sm mb-2 sm:mb-3 leading-snug">
                         <span className="text-[#f0d080] font-medium capitalize">{prestador.categoria}</span>
                         {prestador.zona && (
                           <span className="text-gray-500"> · {prestador.zona}</span>
@@ -412,44 +509,57 @@ export default function Usuarios() {
 
                       {/* Estrellas */}
                       {vals.length > 0 && (
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 mb-2 sm:mb-3">
                           <div className="flex">{renderEstrellas(promedio, true)}</div>
                           <span className="text-[#e2b040] text-sm font-semibold">{promedio.toFixed(1)}</span>
                           <span className="text-gray-500 text-xs">· {vals.length} trabajo{vals.length !== 1 ? 's' : ''}</span>
                         </div>
                       )}
 
-                      {/* Descripción */}
-                      <p className="text-gray-400 text-sm mb-4 line-clamp-2 flex-1">{prestador.descripcion}</p>
+                      {/* Descripción con expand/collapse */}
+                      <p className={`text-gray-400 text-sm leading-relaxed ${descExpandida ? '' : 'line-clamp-2'}`}>
+                        {prestador.descripcion}
+                      </p>
+                      {prestador.descripcion && prestador.descripcion.length > 90 && (
+                        <button
+                          onClick={() => toggleDesc(prestador.id)}
+                          className="mt-1 mb-2 text-[#e2b040]/60 hover:text-[#e2b040] text-xs transition-colors cursor-pointer self-start py-1.5 pr-2"
+                          aria-label={descExpandida ? 'Ver menos' : 'Ver más descripción'}
+                        >
+                          {descExpandida ? 'Ver menos ↑' : 'Ver más ↓'}
+                        </button>
+                      )}
 
-                      {/* Botón principal — Contactar por WhatsApp */}
+                      {/* Espaciador */}
+                      <div className="flex-1 min-h-[8px]" />
+
+                      {/* CTA principal — WhatsApp */}
                       <button
                         onClick={() => navigate(`/reservar/${prestador.id}`)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-[#25D366] hover:bg-[#1da851] active:bg-[#178f42] text-white rounded-xl font-bold text-base transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20 min-h-[52px]"
+                        aria-label={`Contactar a ${prestador.nombre} por WhatsApp`}
                       >
-                        <i className="ri-whatsapp-line text-lg"></i>
+                        <i className="ri-whatsapp-line text-xl"></i>
                         Contactar por WhatsApp
                       </button>
 
                       {/* Acciones secundarias */}
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center justify-between pt-0.5">
                         {vals.length > 0 ? (
                           <button
                             onClick={() => setMostrarValoraciones(expandido ? null : prestador.id)}
-                            className="text-gray-500 hover:text-[#e2b040] text-xs transition-colors cursor-pointer"
+                            className="text-gray-500 hover:text-[#e2b040] text-xs transition-colors cursor-pointer py-2 pr-2"
                           >
-                            {expandido
-                              ? 'Ocultar opiniones'
-                              : `Ver ${vals.length} opinión${vals.length !== 1 ? 'es' : ''}`}
+                            {expandido ? 'Ocultar opiniones' : `Ver ${vals.length} opinión${vals.length !== 1 ? 'es' : ''}`}
                             <i className={`ml-1 ${expandido ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}`}></i>
                           </button>
                         ) : (
-                          <span className="text-gray-600 text-xs italic">Sin opiniones aún</span>
+                          <span className="text-gray-600 text-xs italic py-2">Sin opiniones aún</span>
                         )}
                         {puedeValorar && (
                           <button
                             onClick={() => handleValorar(prestador)}
-                            className="text-[#e2b040]/70 hover:text-[#e2b040] text-xs transition-colors cursor-pointer flex items-center gap-1 ml-auto"
+                            className="text-[#e2b040]/70 hover:text-[#e2b040] text-xs transition-colors cursor-pointer flex items-center gap-1 ml-auto py-2 pl-2"
                           >
                             <i className="ri-star-line"></i>Valorar
                           </button>
@@ -458,14 +568,14 @@ export default function Usuarios() {
 
                       {/* Valoraciones expandidas */}
                       {expandido && vals.length > 0 && (
-                        <div className="mt-4 space-y-3 border-t border-[#e2b040]/10 pt-4">
+                        <div className="mt-3 space-y-3 border-t border-[#e2b040]/10 pt-3">
                           {vals.slice(0, 3).map((v) => (
                             <div key={v.id} className="bg-[#1a1a2e]/60 rounded-lg p-3">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-white text-xs font-semibold">{v.nombre_cliente}</span>
                                 <div className="flex">{renderEstrellas(v.puntuacion, true)}</div>
                               </div>
-                              <p className="text-gray-400 text-xs">{v.comentario}</p>
+                              <p className="text-gray-400 text-xs leading-relaxed">{v.comentario}</p>
                             </div>
                           ))}
                           {vals.length > 3 && (
@@ -481,25 +591,25 @@ export default function Usuarios() {
 
             {/* Sin resultados */}
             {prestadoresFiltrados.length === 0 && (
-              <div className="text-center py-16">
+              <div className="text-center py-14 px-4">
                 <i className="ri-search-line text-5xl text-gray-600 mb-4 block"></i>
-                <p className="text-gray-400 text-lg mb-2">No encontramos prestadores con ese filtro</p>
-                <p className="text-gray-500 text-sm mb-6">Próximamente más opciones en tu zona</p>
-                {(busqueda || categoriaFiltro !== 'todas' || zonaFiltro !== 'todas') && (
+                <p className="text-gray-300 text-lg mb-2 font-semibold">No encontramos prestadores</p>
+                <p className="text-gray-500 text-sm mb-6">Próximamente más opciones en tu zona. Podés intentar con otros términos.</p>
+                {(busqueda || categoriaFiltro !== 'todas' || zonaInput) && (
                   <button
-                    onClick={() => { setBusqueda(''); setCategoriaFiltro('todas'); setZonaFiltro('todas'); }}
-                    className="px-5 py-2 border border-[#e2b040]/40 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
+                    onClick={() => { setBusqueda(''); setCategoriaFiltro('todas'); setZonaInput(''); }}
+                    className="min-h-[48px] px-6 py-3 border border-[#e2b040]/40 text-[#e2b040] rounded-xl hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
                   >
-                    Limpiar filtros
+                    <i className="ri-close-circle-line mr-2"></i>Limpiar filtros
                   </button>
                 )}
               </div>
             )}
 
-            {/* ── Otros servicios ── */}
-            <div className="mt-16 pt-10 border-t border-[#e2b040]/10">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-bold text-white mb-1">Otros servicios que te pueden interesar</h3>
+            {/* Otros servicios */}
+            <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#e2b040]/10">
+              <div className="text-center mb-5">
+                <h3 className="text-base sm:text-lg font-bold text-white mb-1">Otros servicios que te pueden interesar</h3>
                 <p className="text-gray-500 text-sm">Explorá más categorías disponibles</p>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
@@ -511,10 +621,10 @@ export default function Usuarios() {
                       onClick={() => {
                         setCategoriaFiltro(s.cat);
                         setBusqueda('');
-                        setZonaFiltro('todas');
+                        setZonaInput('');
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="px-4 py-2 bg-[#16213e]/60 border border-[#e2b040]/20 text-gray-300 rounded-full text-sm hover:border-[#e2b040]/60 hover:text-[#f0d080] transition-all cursor-pointer"
+                      className="min-h-[40px] px-4 py-2 bg-[#16213e]/60 border border-[#e2b040]/20 text-gray-300 rounded-full text-sm hover:border-[#e2b040]/60 hover:text-[#f0d080] active:bg-[#e2b040]/10 transition-all cursor-pointer"
                     >
                       {s.label}
                     </button>
@@ -525,29 +635,41 @@ export default function Usuarios() {
         )}
       </div>
 
-      {/* ── Modal de valoración ── */}
+      {/* ── Modal valoración ── */}
       {mostrarModalValoracion && prestadorSeleccionado && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold text-white mb-1">
-              Valorar a {prestadorSeleccionado.nombre}
-            </h3>
-            <p className="text-gray-400 text-sm mb-6">Tu opinión ayuda a otros usuarios</p>
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          onClick={() => setMostrarModalValoracion(false)}
+        >
+          <div
+            className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Valorar a {prestadorSeleccionado.nombre}</h3>
+              <button onClick={() => setMostrarModalValoracion(false)} className="p-2 text-gray-400 hover:text-white cursor-pointer">
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-5">Tu opinión ayuda a otros usuarios</p>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Tu nombre</label>
                 <input
-                  type="text" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors text-sm"
+                  type="text"
+                  value={nombreCliente}
+                  onChange={(e) => setNombreCliente(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
                   placeholder="Ej: María G."
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Puntuación</label>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type="button" onClick={() => setPuntuacion(star)} className="cursor-pointer">
+                    <button key={star} type="button" onClick={() => setPuntuacion(star)} className="cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <i className={`text-3xl ${star <= puntuacion ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'}`}></i>
                     </button>
                   ))}
@@ -556,24 +678,29 @@ export default function Usuarios() {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Comentario</label>
                 <textarea
-                  value={comentario} onChange={(e) => { if (e.target.value.length <= 500) setComentario(e.target.value); }}
+                  value={comentario}
+                  onChange={(e) => { if (e.target.value.length <= 500) setComentario(e.target.value); }}
                   maxLength={500}
-                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors resize-none text-sm"
-                  rows={4} placeholder="Compartí tu experiencia con este profesional..."
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors resize-none"
+                  rows={4}
+                  placeholder="Compartí tu experiencia con este profesional..."
+                  style={{ fontSize: '16px' }}
                 />
                 <p className="text-gray-500 text-xs mt-1 text-right">{comentario.length}/500</p>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setMostrarModalValoracion(false)}
-                className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap cursor-pointer">
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setMostrarModalValoracion(false)}
+                className="flex-1 min-h-[52px] px-4 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-colors cursor-pointer font-medium"
+              >
                 Cancelar
               </button>
               <button
                 onClick={handleEnviarValoracion}
                 disabled={enviandoValoracion || !nombreCliente.trim() || !comentario.trim()}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[52px] px-4 py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-xl font-bold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviandoValoracion ? 'Enviando...' : 'Enviar valoración'}
               </button>

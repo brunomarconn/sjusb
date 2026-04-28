@@ -77,7 +77,7 @@ export default function AppHeader({
           {estaLogueado && (
             <button
               onClick={() => navigate('/chat')}
-              className="p-2 rounded-full border border-white/20 text-gray-300 hover:border-[#e2b040] hover:text-[#e2b040] transition-all cursor-pointer flex items-center gap-1.5"
+              className="min-w-[44px] min-h-[44px] p-2.5 rounded-full border border-white/20 text-gray-300 hover:border-[#e2b040] hover:text-[#e2b040] transition-all cursor-pointer flex items-center gap-1.5"
               title="Mensajes"
             >
               <i className="ri-chat-3-line text-base" />
@@ -99,7 +99,7 @@ export default function AppHeader({
           <div className="relative">
             <button
               onClick={() => setMenuAbierto(v => !v)}
-              className="px-3 py-1.5 bg-[#e2b040] text-[#1a1a2e] rounded-full text-xs font-bold hover:bg-[#f0d080] transition-all whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-[#e2b040]/30 cursor-pointer"
+              className="min-h-[44px] px-3 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-full text-xs font-bold hover:bg-[#f0d080] transition-all whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-[#e2b040]/30 cursor-pointer"
             >
               <i className="ri-user-line text-xs" />
               Mi Cuenta
@@ -111,7 +111,7 @@ export default function AppHeader({
                 {/* Overlay para cerrar al tocar fuera */}
                 <div className="fixed inset-0 z-40" onClick={cerrarMenu} />
 
-                <div className="absolute right-0 top-full mt-2 w-52 bg-[#16213e] border border-[#e2b040]/30 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[#16213e] border border-[#e2b040]/30 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[80vh] overflow-y-auto">
 
                   {estaLogueado ? (
                     /* Opciones para usuario logueado */
@@ -120,7 +120,7 @@ export default function AppHeader({
                         <>
                           <button
                             onClick={() => { cerrarMenu(); navigate('/mi-cuenta'); }}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
+                            className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
                           >
                             <i className="ri-user-line" />
                             Mi Perfil
@@ -130,7 +130,7 @@ export default function AppHeader({
                             <>
                               <button
                                 onClick={() => { cerrarMenu(); navigate('/puntos'); }}
-                                className="w-full text-left px-4 py-3 text-sm text-[#e2b040] hover:bg-[#e2b040]/10 transition-colors flex items-center gap-2 cursor-pointer"
+                                className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-[#e2b040] hover:bg-[#e2b040]/10 transition-colors flex items-center gap-2 cursor-pointer"
                               >
                                 <i className="ri-medal-line" />
                                 {puntosUsuario} Puntos
@@ -144,7 +144,7 @@ export default function AppHeader({
                         <>
                           <button
                             onClick={() => { cerrarMenu(); navigate('/prestadores'); }}
-                            className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
+                            className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
                           >
                             <i className="ri-briefcase-line" />
                             Mi Panel
@@ -154,7 +154,7 @@ export default function AppHeader({
                       )}
                       <button
                         onClick={handleCerrarSesion}
-                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-2 cursor-pointer"
+                        className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         <i className="ri-logout-box-line" />
                         Cerrar Sesión
@@ -165,7 +165,7 @@ export default function AppHeader({
                     <>
                       <button
                         onClick={() => { cerrarMenu(); navigate('/mi-cuenta'); }}
-                        className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
+                        className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         <i className="ri-user-line" />
                         Soy Usuario
@@ -173,7 +173,7 @@ export default function AppHeader({
                       <div className="border-t border-white/5" />
                       <button
                         onClick={() => { cerrarMenu(); navigate('/prestadores'); }}
-                        className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
+                        className="w-full text-left px-4 py-3.5 text-sm min-h-[48px] text-gray-200 hover:bg-[#e2b040]/10 hover:text-[#e2b040] transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         <i className="ri-briefcase-line" />
                         Soy Prestador
