@@ -36,7 +36,7 @@ const categorias = [
   'mantenimiento aire acondicionado', 'impermeabilizador hogar',
   'alquiler vajilla', 'pastelería', 'cambio de baterías',
   'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular', 'servicios de catering',
+  'maestro particular', 'servicios de catering', 'Servicio Técnico Informático',
 ];
 
 const todasLasZonas = [
@@ -97,6 +97,7 @@ const otrosServicios = [
   { label: 'Personal Trainer', cat: 'personal trainer' },
   { label: 'Carpintero', cat: 'carpintero' },
   { label: 'Piletero', cat: 'piletero' },
+  { label: 'Servicio Técnico Informático', cat: 'Servicio Técnico Informático' },
 ];
 
 const RESERVADOS_KEY = 'mservicios_reservados';

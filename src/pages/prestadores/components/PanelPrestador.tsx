@@ -41,7 +41,8 @@ const categorias = [
   'personal trainer',
   'adiestrador de perros',
   'maestro particular',
-  'servicios de catering'
+  'servicios de catering',
+  'Servicio Técnico Informático'
 ];
 
 const zonas = [

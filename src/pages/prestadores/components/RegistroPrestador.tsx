@@ -13,7 +13,7 @@ const categorias = [
   'mantenimiento aire acondicionado', 'impermeabilizador hogar',
   'alquiler vajilla', 'pastelería', 'cambio de baterías',
   'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular', 'servicios de catering'
+  'maestro particular', 'servicios de catering', 'Servicio Técnico Informático'
 ];
 
 const zonas = [

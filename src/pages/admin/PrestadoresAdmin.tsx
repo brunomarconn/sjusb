@@ -9,7 +9,7 @@ const CATEGORIAS = [
   'alquiler vajilla', 'pastelería', 'cambio de baterías',
   'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
   'maestro particular', 'servicios de catering', 'carpintero',
-  'cuidador canino profesional', 'limpieza de autos',
+  'cuidador canino profesional', 'limpieza de autos', 'Servicio Técnico Informático',
 ];
 
 const ZONAS = [

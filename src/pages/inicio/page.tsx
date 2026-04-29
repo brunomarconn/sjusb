@@ -163,6 +163,13 @@ const servicios = [
     icono: 'ri-restaurant-2-line',
     imagen: 'images/serviciosdecatering.png',
   },
+  {
+    nombre: 'Servicio Técnico Informático',
+    categoria: 'Servicio Técnico Informático',
+    icono: 'ri-computer-line',
+    imagen:
+      'https://readdy.ai/api/search-image?query=computer%20technician%20repairing%20laptop%20desktop%20computer%20tools%20professional%20technical%20support%20workshop%20clean%20modern%20lighting&width=400&height=260&seq=serv24&orientation=landscape',
+  },
 ];
 
 const pasos = [
