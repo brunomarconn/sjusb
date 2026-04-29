@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { chatService } from '../../services/chatService';
 import type { Conversacion, ConversacionResumen, Mensaje } from '../../types/chat';
 import { formatFechaCompleta, formatHoraChat } from '../../types/chat';
+import PrestadoresAdmin from './PrestadoresAdmin';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
-type AdminView = 'home' | 'mensajes';
+type AdminView = 'home' | 'mensajes' | 'prestadores';
 
 function LoginScreen({
   passwordInput,
@@ -60,25 +61,49 @@ function LoginScreen({
   );
 }
 
-function AdminHome({ onEntrarMensajes }: { onEntrarMensajes: () => void }) {
+function AdminHome({
+  onEntrarMensajes,
+  onEntrarPrestadores,
+}: {
+  onEntrarMensajes: () => void;
+  onEntrarPrestadores: () => void;
+}) {
+  const modulos = [
+    {
+      icono: 'ri-user-star-line',
+      titulo: 'Prestadores',
+      desc: 'Gestión completa: alta, edición, pausar/activar, eliminar, valoraciones y control de estado.',
+      cta: 'Gestionar prestadores',
+      onClick: onEntrarPrestadores,
+    },
+    {
+      icono: 'ri-chat-3-line',
+      titulo: 'Mensajes',
+      desc: 'Ver todas las conversaciones como visualizador total, con filtros por cliente y prestador.',
+      cta: 'Entrar a mensajes',
+      onClick: onEntrarMensajes,
+    },
+  ];
+
   return (
-    <div className="max-w-3xl">
-      <button
-        onClick={onEntrarMensajes}
-        className="w-full text-left bg-[#16213e] border border-white/10 rounded-3xl p-7 hover:border-[#e2b040]/50 hover:bg-[#1b2748] transition-colors"
-      >
-        <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mb-5">
-          <i className="ri-chat-3-line text-3xl text-[#e2b040]" />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Mensajes</h2>
-        <p className="text-gray-400 text-sm leading-relaxed mb-6">
-          Ver todas las conversaciones como visualizador total, con filtros por cliente y prestador.
-        </p>
-        <span className="inline-flex items-center gap-2 text-[#e2b040] font-semibold text-sm">
-          Entrar a mensajes
-          <i className="ri-arrow-right-line" />
-        </span>
-      </button>
+    <div className="max-w-3xl grid sm:grid-cols-2 gap-4">
+      {modulos.map((m) => (
+        <button
+          key={m.titulo}
+          onClick={m.onClick}
+          className="text-left bg-[#16213e] border border-white/10 rounded-3xl p-6 sm:p-7 hover:border-[#e2b040]/50 hover:bg-[#1b2748] transition-colors"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[#e2b040]/10 flex items-center justify-center mb-5">
+            <i className={`${m.icono} text-3xl text-[#e2b040]`} />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">{m.titulo}</h2>
+          <p className="text-gray-400 text-sm leading-relaxed mb-5">{m.desc}</p>
+          <span className="inline-flex items-center gap-2 text-[#e2b040] font-semibold text-sm">
+            {m.cta}
+            <i className="ri-arrow-right-line" />
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -387,7 +412,9 @@ export default function AdminPage() {
                 Panel Admin
               </h1>
               <p className="text-xs text-gray-500">
-                {vista === 'home' ? 'Elegi un modulo' : 'Visualizador total de mensajes'}
+                {vista === 'home' ? 'Elegí un módulo' :
+                 vista === 'mensajes' ? 'Visualizador de mensajes' :
+                 'Gestión de prestadores'}
               </p>
             </div>
           </div>
@@ -418,8 +445,13 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         {vista === 'home' && (
-          <AdminHome onEntrarMensajes={() => setVista('mensajes')} />
+          <AdminHome
+            onEntrarMensajes={() => setVista('mensajes')}
+            onEntrarPrestadores={() => setVista('prestadores')}
+          />
         )}
+
+        {vista === 'prestadores' && <PrestadoresAdmin />}
 
         {vista === 'mensajes' && (
           <MensajesAdminView

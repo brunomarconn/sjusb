@@ -177,6 +177,7 @@ export default function Usuarios() {
         .from('prestadores')
         .select(`id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`)
+        .or('enabled.is.null,enabled.eq.true')   // ocultar prestadores pausados
         .order('created_at', { ascending: false });
 
       if (err) throw err;
@@ -329,7 +330,7 @@ export default function Usuarios() {
         </div>
 
         {/* ── Filtros ── */}
-        <div className="bg-[#16213e]/60 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-[#e2b040]/20 mb-6 sm:mb-8">
+        <div className="relative z-10 bg-[#16213e]/60 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-[#e2b040]/20 mb-6 sm:mb-8">
 
           {/* Fila principal: búsqueda + botón de filtros (mobile) */}
           <div className="flex gap-2">
