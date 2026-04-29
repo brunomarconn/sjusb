@@ -20,6 +20,16 @@ const ZONAS = [
   'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',
 ];
 
+const DIAS_SEMANA = [
+  { valor: 1, nombre: 'Lunes' },
+  { valor: 2, nombre: 'Martes' },
+  { valor: 3, nombre: 'Miércoles' },
+  { valor: 4, nombre: 'Jueves' },
+  { valor: 5, nombre: 'Viernes' },
+  { valor: 6, nombre: 'Sábado' },
+  { valor: 0, nombre: 'Domingo' },
+];
+
 const inp =
   'w-full bg-[#1a1a2e] border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm';
 
@@ -53,6 +63,9 @@ interface PrestadorAdmin {
 
 type FormData = Omit<PrestadorAdmin, 'id' | 'created_at' | 'valoraciones'>;
 type EstadoFiltro = 'todos' | 'activos' | 'pausados';
+type TabEdicion = 'datos' | 'servicio' | 'imagenes' | 'disponibilidad' | 'estado';
+type Turno = 'mañana' | 'tarde';
+type DisponibilidadMap = Record<number, Turno[]>;
 type ModalConfirm = { tipo: 'eliminar' | 'pausar' | 'activar'; prestador: PrestadorAdmin };
 type GaleriaPreview = { url: string; esVideo: boolean; remote?: boolean };
 
@@ -210,6 +223,10 @@ export default function PrestadoresAdmin() {
   const [zonasSeleccionadas, setZonasSeleccionadas] = useState<string[]>([]);
   const [zonaPersonalizada, setZonaPersonalizada] = useState('');
   const [mostrandoInputCategoria, setMostrandoInputCategoria] = useState(false);
+  const [tabEdicion, setTabEdicion] = useState<TabEdicion>('datos');
+  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
+  const [guardandoDisp, setGuardandoDisp] = useState(false);
+  const [dispGuardada, setDispGuardada] = useState(false);
   const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>(() =>
     mergeCategorias(CATEGORIAS, loadCategoriasExtra())
   );
@@ -327,6 +344,54 @@ export default function PrestadoresAdmin() {
     setForm((prev) => ({ ...prev, zona: zonas.join(', ') }));
   };
 
+  const cargarDisponibilidad = async (prestadorId: string) => {
+    const { data } = await supabase
+      .from('disponibilidad_prestadores')
+      .select('dia_semana, turno')
+      .eq('prestador_id', prestadorId);
+    if (data) {
+      const mapa: DisponibilidadMap = {};
+      data.forEach(({ dia_semana, turno }: { dia_semana: number; turno: Turno }) => {
+        if (!mapa[dia_semana]) mapa[dia_semana] = [];
+        mapa[dia_semana].push(turno);
+      });
+      setDisponibilidad(mapa);
+    }
+  };
+
+  const toggleTurno = (dia: number, turno: Turno) => {
+    setDisponibilidad((prev) => {
+      const actual = prev[dia] || [];
+      const nuevo = actual.includes(turno)
+        ? actual.filter((t) => t !== turno)
+        : [...actual, turno];
+      return { ...prev, [dia]: nuevo };
+    });
+  };
+
+  const guardarDisponibilidad = async (prestadorId: string) => {
+    setGuardandoDisp(true);
+    try {
+      await supabase.from('disponibilidad_prestadores').delete().eq('prestador_id', prestadorId);
+      const inserts: { prestador_id: string; dia_semana: number; turno: Turno }[] = [];
+      for (const [dia, turnos] of Object.entries(disponibilidad)) {
+        for (const turno of turnos) {
+          inserts.push({ prestador_id: prestadorId, dia_semana: Number(dia), turno });
+        }
+      }
+      if (inserts.length > 0) {
+        await supabase.from('disponibilidad_prestadores').insert(inserts);
+      }
+      setDispGuardada(true);
+      setTimeout(() => setDispGuardada(false), 3000);
+      showToast('Disponibilidad guardada ✓');
+    } catch (e) {
+      showToast(getErrorMessage(e) || 'Error al guardar disponibilidad', false);
+    } finally {
+      setGuardandoDisp(false);
+    }
+  };
+
   const registrarCategoriaSiEsNueva = (categoria: string) => {
     const clean = categoria.trim();
     if (!clean) return;
@@ -429,6 +494,9 @@ export default function PrestadoresAdmin() {
     setZonasSeleccionadas([]);
     setZonaPersonalizada('');
     setMostrandoInputCategoria(false);
+    setTabEdicion('datos');
+    setDisponibilidad({});
+    setDispGuardada(false);
     setFotoFile(null);
     setFotoPreview('');
     setGaleriaFiles([]);
@@ -449,6 +517,10 @@ export default function PrestadoresAdmin() {
     setMostrandoInputCategoria(
       !categoriasDisponibles.some((cat) => normalizeCategoria(cat) === normalizeCategoria(p.categoria))
     );
+    setTabEdicion('datos');
+    setDisponibilidad({});
+    setDispGuardada(false);
+    cargarDisponibilidad(p.id);
     setZonasSeleccionadas(
       p.zona
         ? p.zona.split(',').map((z) => z.trim()).filter(Boolean)
@@ -820,264 +892,383 @@ export default function PrestadoresAdmin() {
           onClick={() => !guardando && setModalForm(false)}
         >
           <div
-            className="bg-[#16213e] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden shadow-2xl"
+            className="bg-[#16213e] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-[#16213e] border-b border-white/10 px-5 py-4 flex items-center justify-between z-10">
-              <h3 className="text-white font-bold text-lg">
-                {editando ? 'Editar prestador' : 'Nuevo prestador'}
+            <div className="shrink-0 border-b border-white/10 px-5 py-4 flex items-center justify-between">
+              <h3 className="text-white font-bold text-lg truncate pr-4">
+                {editando ? `${editando.nombre} ${editando.apellido}` : 'Nuevo prestador'}
               </h3>
-              <button onClick={() => setModalForm(false)} className="p-2 text-gray-500 hover:text-white">
+              <button onClick={() => !guardando && setModalForm(false)} className="p-2 text-gray-500 hover:text-white shrink-0">
                 <i className="ri-close-line text-xl"></i>
               </button>
             </div>
 
-            <div className="max-h-[calc(92vh-73px)] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <div className="p-5 sm:p-6 space-y-5">
+            {/* Tabs */}
+            <div className="shrink-0 flex border-b border-white/10 px-1">
+              {([
+                { id: 'datos' as TabEdicion, icon: 'ri-user-line', label: 'Datos' },
+                { id: 'servicio' as TabEdicion, icon: 'ri-briefcase-line', label: 'Servicio' },
+                { id: 'imagenes' as TabEdicion, icon: 'ri-image-line', label: 'Imágenes' },
+                ...(editando ? [{ id: 'disponibilidad' as TabEdicion, icon: 'ri-calendar-check-line', label: 'Horarios' }] : []),
+                ...(editando ? [{ id: 'estado' as TabEdicion, icon: 'ri-settings-3-line', label: 'Estado' }] : []),
+              ]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setTabEdicion(tab.id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-semibold transition-colors border-b-2 -mb-px ${
+                    tabEdicion === tab.id
+                      ? 'border-[#e2b040] text-[#e2b040]'
+                      : 'border-transparent text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  <i className={tab.icon}></i>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+            </div>
 
-              {/* Foto archivo */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Foto de Perfil {!editando && <span className="text-red-400">*</span>}
-                </label>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  {fotoPreview ? (
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#e2b040] shrink-0 mx-auto sm:mx-0">
-                      <img src={fotoPreview} alt="" className="w-full h-full object-cover object-top" />
+            {/* Contenido scrollable */}
+            <div className="flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+
+              {/* ── Tab: Datos personales ── */}
+              {tabEdicion === 'datos' && (
+                <div className="p-5 sm:p-6 space-y-5">
+                  {/* Foto de perfil */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Foto de Perfil {!editando && <span className="text-red-400">*</span>}
+                    </label>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      {fotoPreview ? (
+                        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#e2b040] shrink-0 mx-auto sm:mx-0">
+                          <img src={fotoPreview} alt="" className="w-full h-full object-cover object-top" />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-[#1a1a2e] border-2 border-dashed border-[#e2b040]/40 flex items-center justify-center shrink-0 mx-auto sm:mx-0">
+                          <i className="ri-user-line text-2xl text-gray-500"></i>
+                        </div>
+                      )}
+                      <label className="flex-1 min-h-[72px] px-4 py-4 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-gray-300 hover:border-[#e2b040] transition-colors cursor-pointer text-sm flex items-center">
+                        <i className="ri-upload-cloud-line mr-2 text-base shrink-0"></i>
+                        <span className="truncate">
+                          {fotoFile ? fotoFile.name : (editando ? 'Seleccionar nueva foto (opcional)' : 'Seleccionar foto (obligatoria)')}
+                        </span>
+                        <input type="file" accept="image/*" onChange={handleFotoChange} className="hidden" />
+                      </label>
                     </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-[#1a1a2e] border-2 border-dashed border-[#e2b040]/40 flex items-center justify-center shrink-0 mx-auto sm:mx-0">
-                      <i className="ri-user-line text-2xl text-gray-500"></i>
+                  </div>
+
+                  {/* Nombre + Apellido */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Nombre <span className="text-red-400">*</span></label>
+                      <input value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                        placeholder="Juan" className={inp} style={{ fontSize: '16px' }} />
                     </div>
-                  )}
-                  <label className="flex-1 min-h-[72px] px-4 py-4 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-gray-300 hover:border-[#e2b040] transition-colors cursor-pointer text-sm flex items-center">
-                    <i className="ri-upload-cloud-line mr-2 text-base shrink-0"></i>
-                    <span className="truncate">
-                      {fotoFile ? fotoFile.name : (editando ? 'Seleccionar nueva foto (opcional)' : 'Seleccionar foto (obligatoria)')}
-                    </span>
-                    <input type="file" accept="image/*" onChange={handleFotoChange} className="hidden" />
-                  </label>
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Apellido <span className="text-red-400">*</span></label>
+                      <input value={form.apellido} onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
+                        placeholder="Pérez" className={inp} style={{ fontSize: '16px' }} />
+                    </div>
+                  </div>
 
-              {/* Nombre + Apellido */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Nombre <span className="text-red-400">*</span></label>
-                  <input value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    placeholder="Juan" className={inp} style={{ fontSize: '16px' }} />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Apellido <span className="text-red-400">*</span></label>
-                  <input value={form.apellido} onChange={(e) => setForm((f) => ({ ...f, apellido: e.target.value }))}
-                    placeholder="Pérez" className={inp} style={{ fontSize: '16px' }} />
-                </div>
-              </div>
+                  {/* DNI + Email */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">DNI <span className="text-red-400">*</span></label>
+                      <input value={form.dni} onChange={(e) => setForm((f) => ({ ...f, dni: e.target.value }))}
+                        placeholder="12345678" className={inp} style={{ fontSize: '16px' }} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Email</label>
+                      <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                        placeholder="juan@email.com" className={inp} style={{ fontSize: '16px' }} />
+                    </div>
+                  </div>
 
-              {/* DNI + Email */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">DNI <span className="text-red-400">*</span></label>
-                  <input value={form.dni} onChange={(e) => setForm((f) => ({ ...f, dni: e.target.value }))}
-                    placeholder="12345678" className={inp} style={{ fontSize: '16px' }} />
+                  {/* Teléfono */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Teléfono / WhatsApp</label>
+                    <input value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+                      placeholder="5493512345678" className={inp} style={{ fontSize: '16px' }} />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Email</label>
-                  <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="juan@email.com" className={inp} style={{ fontSize: '16px' }} />
-                </div>
-              </div>
+              )}
 
-              {/* Teléfono + Categoría */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Teléfono / WhatsApp</label>
-                  <input value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-                    placeholder="5493512345678" className={inp} style={{ fontSize: '16px' }} />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Categoría</label>
-                  <select
-                    value={mostrandoInputCategoria ? CATEGORIA_CUSTOM : form.categoria}
-                    onChange={(e) => {
-                      if (e.target.value === CATEGORIA_CUSTOM) {
-                        setMostrandoInputCategoria(true);
-                        setForm((f) => ({ ...f, categoria: '' }));
-                      } else {
-                        setMostrandoInputCategoria(false);
-                        setForm((f) => ({ ...f, categoria: e.target.value }));
-                      }
-                    }}
-                    className={inp} style={{ fontSize: '16px' }}
-                  >
-                    <option value={CATEGORIA_CUSTOM}>Otra categoría...</option>
-                    {categoriasDisponibles.map((c) => (
-                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                    ))}
-                  </select>
-                  {mostrandoInputCategoria && (
-                    <input
-                      value={form.categoria}
-                      onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-                      placeholder="Escribí la nueva categoría"
-                      className={`${inp} mt-2`}
+              {/* ── Tab: Servicio ── */}
+              {tabEdicion === 'servicio' && (
+                <div className="p-5 sm:p-6 space-y-5">
+                  {/* Categoría */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Categoría</label>
+                    <select
+                      value={mostrandoInputCategoria ? CATEGORIA_CUSTOM : form.categoria}
+                      onChange={(e) => {
+                        if (e.target.value === CATEGORIA_CUSTOM) {
+                          setMostrandoInputCategoria(true);
+                          setForm((f) => ({ ...f, categoria: '' }));
+                        } else {
+                          setMostrandoInputCategoria(false);
+                          setForm((f) => ({ ...f, categoria: e.target.value }));
+                        }
+                      }}
+                      className={inp} style={{ fontSize: '16px' }}
+                    >
+                      <option value={CATEGORIA_CUSTOM}>✏️ Otra categoría...</option>
+                      {categoriasDisponibles.map((c) => (
+                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                      ))}
+                    </select>
+                    {mostrandoInputCategoria && (
+                      <input
+                        value={form.categoria}
+                        onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
+                        placeholder="Escribí la nueva categoría"
+                        className={`${inp} mt-2`}
+                        style={{ fontSize: '16px' }}
+                        autoFocus
+                      />
+                    )}
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Descripción</label>
+                    <textarea
+                      value={form.descripcion}
+                      onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
+                      rows={6}
+                      placeholder="Descripción del servicio que ofrece..."
+                      className={`${inp} resize-none`}
                       style={{ fontSize: '16px' }}
-                      autoFocus
                     />
-                  )}
-                </div>
-              </div>
+                  </div>
 
-              {/* Zona */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Zona de Trabajo <span className="text-red-400">*</span>
-                  <span className="text-gray-500 ml-1 font-normal">(podés elegir varias)</span>
-                </label>
-                <div className="rounded-xl border border-[#e2b040]/30 bg-[#1f2a4d] p-3 space-y-3">
-                  <div className="flex flex-wrap gap-2.5">
-                    {ZONAS.map((zona) => {
-                      const activa = zonasSeleccionadas.includes(zona);
-                      return (
+                  {/* Zona */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Zona de Trabajo <span className="text-red-400">*</span>
+                      <span className="text-gray-500 ml-1 font-normal">(podés elegir varias)</span>
+                    </label>
+                    <div className="rounded-xl border border-[#e2b040]/30 bg-[#1f2a4d] p-3 space-y-3">
+                      <div className="flex flex-wrap gap-2.5">
+                        {ZONAS.map((zona) => {
+                          const activa = zonasSeleccionadas.includes(zona);
+                          return (
+                            <button
+                              key={zona}
+                              type="button"
+                              onClick={() => toggleZona(zona)}
+                              className={`px-4 py-2 rounded-full text-sm border transition-colors ${
+                                activa
+                                  ? 'bg-[#e2b040]/20 text-[#e2b040] border-[#e2b040]'
+                                  : 'bg-transparent text-gray-300 border-[#e2b040]/40 hover:border-[#e2b040]'
+                              }`}
+                            >
+                              {zona}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          value={zonaPersonalizada}
+                          onChange={(e) => setZonaPersonalizada(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); agregarZonaPersonalizada(); }
+                          }}
+                          placeholder="Otra zona (escribí y presioná +)"
+                          className={`${inp} border-[#e2b040]/20`}
+                          style={{ fontSize: '16px' }}
+                        />
                         <button
-                          key={zona}
                           type="button"
-                          onClick={() => toggleZona(zona)}
-                          className={`px-4 py-2 rounded-full text-sm border transition-colors ${
-                            activa
-                              ? 'bg-[#e2b040]/20 text-[#e2b040] border-[#e2b040]'
-                              : 'bg-transparent text-gray-300 border-[#e2b040]/40 hover:border-[#e2b040]'
-                          }`}
-                        >
-                          {zona}
-                        </button>
+                          onClick={agregarZonaPersonalizada}
+                          className="w-11 shrink-0 rounded-xl bg-[#6b5635] text-[#f3d37a] hover:bg-[#7a6440] transition-colors"
+                        >+</button>
+                      </div>
+
+                      {zonasSeleccionadas.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {zonasSeleccionadas.map((zona) => (
+                            <span key={zona} className="flex items-center gap-1 px-3 py-1 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm">
+                              {zona}
+                              <button type="button" onClick={() => quitarZona(zona)} className="text-[#e2b040] hover:text-white">
+                                <i className="ri-close-line"></i>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Tab: Imágenes ── */}
+              {tabEdicion === 'imagenes' && (
+                <div className="p-5 sm:p-6 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                      Fotos / Videos del trabajo
+                      <span className="text-gray-500 ml-1 font-normal">(opcional)</span>
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Podés agregar fotos o videos de trabajos anteriores, certificados o flyers.
+                    </p>
+                    <label className="flex items-center justify-center gap-2 min-h-[52px] px-4 py-3 border border-[#e2b040]/30 border-dashed rounded-xl bg-[#1a1a2e] text-gray-300 hover:border-[#e2b040] transition-colors cursor-pointer text-sm">
+                      <i className="ri-image-add-line text-base"></i>
+                      <span>Agregar fotos o videos</span>
+                      <input type="file" accept="image/*,video/*" multiple onChange={handleGaleriaChange} className="hidden" />
+                    </label>
+
+                    {galeriaPreviews.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                        {galeriaPreviews.map((item, index) => (
+                          <div key={`${item.url}-${index}`} className="relative rounded-xl overflow-hidden border border-white/10 bg-[#1a1a2e] aspect-square">
+                            {item.esVideo ? (
+                              <video src={item.url} className="w-full h-full object-cover" controls />
+                            ) : (
+                              <img src={item.url} alt="" className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeGaleriaItem(index)}
+                              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-white hover:bg-red-500/80 transition-colors flex items-center justify-center"
+                            >
+                              <i className="ri-close-line"></i>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-600 text-xs mt-4">Sin imágenes cargadas</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Tab: Disponibilidad (solo edición) ── */}
+              {tabEdicion === 'disponibilidad' && editando && (
+                <div className="p-5 sm:p-6 space-y-4">
+                  <p className="text-xs text-gray-500">
+                    Seleccioná los días y turnos en que el prestador trabaja. Los clientes verán esta información al reservar.
+                  </p>
+                  <div className="grid gap-2">
+                    {DIAS_SEMANA.map(({ valor, nombre }) => {
+                      const turnos = disponibilidad[valor] || [];
+                      return (
+                        <div key={valor} className="flex items-center bg-[#1a1a2e] rounded-xl px-4 py-3 gap-3">
+                          <span className="text-white font-medium text-sm shrink-0 w-20">{nombre}</span>
+                          <div className="flex gap-2 flex-1">
+                            {(['mañana', 'tarde'] as Turno[]).map((turno) => {
+                              const activo = turnos.includes(turno);
+                              return (
+                                <button
+                                  key={turno}
+                                  type="button"
+                                  onClick={() => toggleTurno(valor, turno)}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                                    activo
+                                      ? 'bg-[#e2b040] text-[#1a1a2e]'
+                                      : 'bg-[#16213e] border border-white/10 text-gray-500 hover:border-[#e2b040]/30 hover:text-gray-300'
+                                  }`}
+                                >
+                                  <i className={turno === 'mañana' ? 'ri-sun-line' : 'ri-moon-line'}></i>
+                                  {turno === 'mañana' ? 'Mañana' : 'Tarde'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
+                </div>
+              )}
 
-                  <div className="flex gap-2">
-                    <input
-                      value={zonaPersonalizada}
-                      onChange={(e) => setZonaPersonalizada(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          agregarZonaPersonalizada();
-                        }
-                      }}
-                      placeholder="Otra zona (escribí y presioná +)"
-                      className={`${inp} border-[#e2b040]/20`}
-                      style={{ fontSize: '16px' }}
-                    />
+              {/* ── Tab: Estado (solo edición) ── */}
+              {tabEdicion === 'estado' && editando && (
+                <div className="p-5 sm:p-6 space-y-5">
+                  {/* Disponibilidad */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Disponibilidad</label>
                     <button
                       type="button"
-                      onClick={agregarZonaPersonalizada}
-                      className="w-11 shrink-0 rounded-xl bg-[#6b5635] text-[#f3d37a] hover:bg-[#7a6440] transition-colors"
+                      onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))}
+                      className="flex items-center gap-3 w-full px-3 py-3 bg-[#1a1a2e] border border-white/10 rounded-xl hover:border-[#e2b040]/30 transition-colors"
                     >
-                      +
+                      <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${form.enabled ? 'bg-green-500' : 'bg-gray-600'}`}>
+                        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                      </div>
+                      <div className="text-left">
+                        <p className={`text-sm font-semibold ${form.enabled ? 'text-green-400' : 'text-gray-400'}`}>
+                          {form.enabled ? 'Activo' : 'Pausado'}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {form.enabled ? 'Aparece en la búsqueda pública' : 'Oculto para los usuarios'}
+                        </p>
+                      </div>
                     </button>
                   </div>
 
-                  {zonasSeleccionadas.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {zonasSeleccionadas.map((zona) => (
-                        <span key={zona} className="flex items-center gap-1 px-3 py-1 bg-[#e2b040]/20 text-[#e2b040] rounded-full text-sm">
-                          {zona}
-                          <button type="button" onClick={() => quitarZona(zona)} className="text-[#e2b040] hover:text-white">
-                            <i className="ri-close-line"></i>
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Descripción */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Descripción</label>
-                <textarea
-                  value={form.descripcion}
-                  onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
-                  rows={3}
-                  placeholder="Descripción del servicio que ofrece..."
-                  className={`${inp} resize-none`}
-                  style={{ fontSize: '16px' }}
-                />
-              </div>
-
-              {/* ContraseÃ±a inicial + Estado */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                  Fotos / Videos del trabajo
-                  <span className="text-gray-500 ml-1 font-normal">(opcional)</span>
-                </label>
-                <p className="text-xs text-gray-500 mb-3">
-                  PodÃ©s agregar fotos o videos de trabajos anteriores, certificados o flyers.
-                </p>
-                <label className="flex items-center justify-center gap-2 min-h-[52px] px-4 py-3 border border-[#e2b040]/30 border-dashed rounded-xl bg-[#1a1a2e] text-gray-300 hover:border-[#e2b040] transition-colors cursor-pointer text-sm">
-                  <i className="ri-image-add-line text-base"></i>
-                  <span>Agregar fotos o videos</span>
-                  <input type="file" accept="image/*,video/*" multiple onChange={handleGaleriaChange} className="hidden" />
-                </label>
-
-                {galeriaPreviews.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                    {galeriaPreviews.map((item, index) => (
-                      <div key={`${item.url}-${index}`} className="relative rounded-xl overflow-hidden border border-white/10 bg-[#1a1a2e] aspect-square">
-                        {item.esVideo ? (
-                          <video src={item.url} className="w-full h-full object-cover" controls />
-                        ) : (
-                          <img src={item.url} alt="" className="w-full h-full object-cover" />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeGaleriaItem(index)}
-                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-white hover:bg-red-500/80 transition-colors"
-                        >
-                          <i className="ri-close-line"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                {/*
-                <div>
-                    <label className="block text-xs text-gray-400 mb-1.5">ContraseÃ±a inicial</label>
+                  {/* Trabajos completados */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Trabajos completados</label>
                     <input
-                      placeholder="Si lo dejÃ¡s vacÃ­o se usarÃ¡ el DNI"
+                      type="number"
+                      min={0}
+                      value={form.trabajos_completados}
+                      onChange={(e) => setForm((f) => ({ ...f, trabajos_completados: Number(e.target.value) }))}
+                      className={inp}
+                      style={{ fontSize: '16px' }}
+                    />
+                    <p className="text-xs text-gray-600 mt-1">Se muestra en el perfil público del prestador</p>
                   </div>
-                */}
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Estado</label>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))}
-                    className="flex items-center gap-3 w-full px-3 py-2.5 bg-[#1a1a2e] border border-white/10 rounded-xl hover:border-[#e2b040]/30 transition-colors"
-                  >
-                    <div className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${form.enabled ? 'bg-green-500' : 'bg-gray-600'}`}>
-                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.enabled ? 'left-[22px]' : 'left-0.5'}`} />
-                    </div>
-                    <span className={`text-sm font-medium ${form.enabled ? 'text-green-400' : 'text-gray-500'}`}>
-                      {form.enabled ? 'Activo' : 'Pausado'}
-                    </span>
-                  </button>
-                </div>
-              </div>
 
-              {/* Acciones */}
-              <div className="flex gap-3 pt-2">
+                  {/* Zona de peligro */}
+                  <div className="pt-3 border-t border-red-500/20">
+                    <p className="text-xs font-semibold text-red-400/60 uppercase tracking-wider mb-3">Zona de peligro</p>
+                    <button
+                      onClick={() => { setConfirmModal({ tipo: 'eliminar', prestador: editando }); setModalForm(false); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 bg-red-500/10 text-red-400 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors"
+                    >
+                      <i className="ri-delete-bin-line text-base"></i>
+                      Eliminar prestador definitivamente
+                    </button>
+                    <p className="text-xs text-gray-600 mt-2 text-center">Esta acción no se puede deshacer.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer fijo */}
+            <div className="shrink-0 px-5 sm:px-6 py-4 border-t border-white/10 flex gap-3">
+              <button
+                onClick={() => !guardando && !guardandoDisp && setModalForm(false)}
+                disabled={guardando || guardandoDisp}
+                className="flex-1 py-3 bg-white/5 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition-colors font-medium disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              {tabEdicion === 'disponibilidad' && editando ? (
                 <button
-                  onClick={() => setModalForm(false)}
-                  disabled={guardando}
-                  className="flex-1 py-3 bg-white/5 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition-colors font-medium disabled:opacity-50"
+                  onClick={() => guardarDisponibilidad(editando.id)}
+                  disabled={guardandoDisp}
+                  className="flex-1 py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold text-sm hover:bg-[#e2b040]/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Cancelar
+                  {guardandoDisp ? (
+                    <><i className="ri-loader-4-line animate-spin"></i>Guardando...</>
+                  ) : dispGuardada ? (
+                    <><i className="ri-checkbox-circle-line"></i>Guardado</>
+                  ) : (
+                    <><i className="ri-save-line"></i>Guardar horarios</>
+                  )}
                 </button>
+              ) : (
                 <button
                   onClick={guardar}
                   disabled={guardando}
@@ -1085,8 +1276,7 @@ export default function PrestadoresAdmin() {
                 >
                   {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear prestador'}
                 </button>
-              </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

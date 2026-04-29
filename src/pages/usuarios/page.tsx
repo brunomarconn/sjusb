@@ -554,7 +554,7 @@ export default function Usuarios() {
                       )}
 
                       {/* Descripción con expand/collapse */}
-                      <p className={`text-gray-400 text-sm leading-relaxed ${descExpandida ? '' : 'line-clamp-2'}`}>
+                      <p className={`text-gray-400 text-sm leading-relaxed whitespace-pre-wrap ${descExpandida ? '' : 'line-clamp-2'}`}>
                         {prestador.descripcion}
                       </p>
                       {prestador.descripcion && prestador.descripcion.length > 90 && (
