@@ -68,6 +68,60 @@ function isVideoUrl(url: string): boolean {
   return /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return error instanceof Error ? error.message : 'Error inesperado';
+}
+
+function isMissingColumnError(error: unknown, columns: string[]): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return columns.some((column) => message.includes(column.toLowerCase()))
+    && (message.includes('schema cache') || message.includes('could not find') || message.includes('does not exist'));
+}
+
+function omitColumns<T extends Record<string, unknown>>(payload: T, columns: string[]): Partial<T> {
+  const cleaned = { ...payload };
+  for (const column of columns) {
+    delete cleaned[column];
+  }
+  return cleaned;
+}
+
+const ADMIN_ONLY_COLUMNS = ['enabled', 'trabajos_completados'];
+
+async function insertPrestador(payload: Record<string, unknown>) {
+  const result = await supabase.from('prestadores').insert([payload]);
+  if (!result.error) return;
+
+  if (isMissingColumnError(result.error, ADMIN_ONLY_COLUMNS)) {
+    const fallback = await supabase
+      .from('prestadores')
+      .insert([omitColumns(payload, ADMIN_ONLY_COLUMNS)]);
+    if (!fallback.error) return;
+    throw fallback.error;
+  }
+
+  throw result.error;
+}
+
+async function updatePrestador(id: string, payload: Record<string, unknown>) {
+  const result = await supabase.from('prestadores').update(payload).eq('id', id);
+  if (!result.error) return;
+
+  if (isMissingColumnError(result.error, ADMIN_ONLY_COLUMNS)) {
+    const fallback = await supabase
+      .from('prestadores')
+      .update(omitColumns(payload, ADMIN_ONLY_COLUMNS))
+      .eq('id', id);
+    if (!fallback.error) return;
+    throw fallback.error;
+  }
+
+  throw result.error;
+}
+
 function Badge({ activo }: { activo: boolean }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activo ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
@@ -391,13 +445,11 @@ export default function PrestadoresAdmin() {
       };
 
       if (editando) {
-        const { error: err } = await supabase.from('prestadores').update(payload).eq('id', editando.id);
-        if (err) throw err;
+        await updatePrestador(editando.id, payload);
         showToast('Prestador actualizado correctamente ✓');
       } else {
         const password = form.dni.trim();
-        const { error: err } = await supabase.from('prestadores').insert([{ ...payload, password }]);
-        if (err) throw err;
+        await insertPrestador({ ...payload, password });
         showToast('Prestador creado correctamente ✓');
       }
 
@@ -409,7 +461,7 @@ export default function PrestadoresAdmin() {
       setZonaPersonalizada('');
       await cargar();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error al guardar', false);
+      showToast(getErrorMessage(e) || 'Error al guardar', false);
     } finally {
       setGuardando(false);
     }
@@ -428,13 +480,18 @@ export default function PrestadoresAdmin() {
       } else {
         const nuevoEstado = tipo === 'activar';
         const { error: err } = await supabase.from('prestadores').update({ enabled: nuevoEstado }).eq('id', prestador.id);
-        if (err) throw err;
-        showToast(nuevoEstado ? 'Prestador reactivado ✓' : 'Prestador pausado');
+        if (isMissingColumnError(err, ['enabled'])) {
+          showToast('La tabla prestadores no tiene la columna enabled. Ejecutá la migración de campos admin.', false);
+        } else if (err) {
+          throw err;
+        } else {
+          showToast(nuevoEstado ? 'Prestador reactivado ✓' : 'Prestador pausado');
+        }
       }
       setConfirmModal(null);
       await cargar();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error', false);
+      showToast(getErrorMessage(e) || 'Error', false);
     } finally {
       setProcesando(false);
     }

@@ -174,16 +174,31 @@ export default function Usuarios() {
     setLoading(true);
     setError('');
     try {
-      const { data, error: err } = await supabase
+      const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
+          valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
+
+      let result = await supabase
         .from('prestadores')
-        .select(`id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
-          valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`)
-        .or('enabled.is.null,enabled.eq.true')   // ocultar prestadores pausados
+        .select(selectBase)
+        .or('enabled.is.null,enabled.eq.true')
         .order('created_at', { ascending: false });
 
-      if (err) throw err;
-      if (data && data.length > 0) {
-        setPrestadores(data as Prestador[]);
+      // Si falla por la columna enabled (aún no migrada), reintentamos sin el filtro
+      if (result.error) {
+        const msg = result.error.message?.toLowerCase() ?? '';
+        const esErrorColumna = msg.includes('enabled') || msg.includes('schema cache') || msg.includes('could not find');
+        if (esErrorColumna) {
+          result = await supabase
+            .from('prestadores')
+            .select(selectBase)
+            .order('created_at', { ascending: false });
+        }
+      }
+
+      if (result.error) throw result.error;
+
+      if (result.data && result.data.length > 0) {
+        setPrestadores(result.data as Prestador[]);
       } else {
         setPrestadores(adaptarMock());
       }
