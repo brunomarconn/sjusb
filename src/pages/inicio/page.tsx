@@ -449,7 +449,7 @@ export default function Inicio() {
             <div className="w-full md:w-1/2 h-44 sm:h-52 md:h-auto flex-shrink-0 overflow-hidden">
               <img
                 src="https://readdy.ai/api/search-image?query=diverse%20team%20of%20professional%20service%20workers%20plumber%20electrician%20painter%20gardener%20standing%20together%20smiling%20confident%20uniforms%20tools%20dark%20studio%20background%20warm%20golden%20accent%20lighting%20professional%20corporate%20photography&width=1200&height=480&seq=como_funciona_team_v2&orientation=landscape"
-                alt="Equipo de profesionales MRServicios"
+                alt="Equipo de profesionales ServiciosYa"
                 className="w-full h-full object-cover object-top"
                 loading="lazy"
               />
@@ -481,7 +481,7 @@ export default function Inicio() {
               <div className="rounded-3xl overflow-hidden border border-[#e2b040]/30 shadow-2xl shadow-[#e2b040]/10">
                 <img
                   src="https://readdy.ai/api/search-image?query=professional%20service%20worker%20in%20uniform%20shaking%20hands%20with%20satisfied%20homeowner%20at%20front%20door%20successful%20job%20completion%20trust%20agreement%20warm%20natural%20light%20residential%20setting%20confident%20smiling%20both%20people&width=700&height=500&seq=quienes_somos_acuerdo_01&orientation=landscape"
-                  alt="Profesional y cliente MRServicios"
+                  alt="Profesional y cliente ServiciosYa"
                   className="w-full h-48 sm:h-auto object-cover object-top"
                   loading="lazy"
                 />
@@ -534,10 +534,10 @@ export default function Inicio() {
               <div className="flex items-center gap-3 mb-3">
                 <img
                   src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-                  alt="MRServicios Logo"
+                  alt="ServiciosYa Logo"
                   className="w-10 h-10 object-contain"
                 />
-                <span className="text-xl font-bold text-[#e2b040]">MRServicios</span>
+                <span className="text-xl font-bold text-[#e2b040]">ServiciosYa</span>
               </div>
               <p className="text-gray-400 text-sm leading-relaxed mb-4">
                 Servicios profesionales con garantía
@@ -599,7 +599,7 @@ export default function Inicio() {
 
           <div className="border-t border-[#e2b040]/10 py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="text-gray-500 text-xs sm:text-sm text-center">
-              © 2025 MRServicios. Todos los derechos reservados.
+              © 2026 ServiciosYa. Todos los derechos reservados.
             </p>
           </div>
         </div>

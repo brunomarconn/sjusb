@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 
+const SUPABASE_URL = import.meta.env.VITE_PUBLIC_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY as string;
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
+
 // ─── Constantes ────────────────────────────────────────────────
 const CATEGORIAS = [
   'electricista', 'jardinero', 'piletero', 'albañil', 'bicicletero',
@@ -90,6 +94,45 @@ function omitColumns<T extends Record<string, unknown>>(payload: T, columns: str
 }
 
 const ADMIN_ONLY_COLUMNS = ['enabled', 'trabajos_completados'];
+const CATEGORIA_CUSTOM = '__custom__';
+const CATEGORIAS_EXTRA_KEY = 'serviciosya_admin_categorias_extra';
+const PRESTADORES_BASE_SELECT =
+  'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at';
+
+function normalizeCategoria(categoria: string): string {
+  return categoria.trim().toLowerCase();
+}
+
+function mergeCategorias(...listas: string[][]): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const lista of listas) {
+    for (const categoria of lista) {
+      const clean = categoria.trim();
+      const key = normalizeCategoria(clean);
+      if (!clean || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(clean);
+    }
+  }
+
+  return merged;
+}
+
+function loadCategoriasExtra(): string[] {
+  try {
+    const raw = localStorage.getItem(CATEGORIAS_EXTRA_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCategoriasExtra(categorias: string[]) {
+  localStorage.setItem(CATEGORIAS_EXTRA_KEY, JSON.stringify(categorias));
+}
 
 async function insertPrestador(payload: Record<string, unknown>) {
   const result = await supabase.from('prestadores').insert([payload]);
@@ -122,6 +165,26 @@ async function updatePrestador(id: string, payload: Record<string, unknown>) {
   throw result.error;
 }
 
+async function deletePrestadorCompleto(prestadorId: string) {
+  if (!ADMIN_SECRET) throw new Error('VITE_ADMIN_SECRET no configurada');
+
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/eliminar-prestador`, {
+    method: 'POST',
+    headers: {
+      apikey: ANON_KEY,
+      authorization: `Bearer ${ANON_KEY}`,
+      'content-type': 'application/json',
+      'x-admin-secret': ADMIN_SECRET,
+    },
+    body: JSON.stringify({ prestador_id: prestadorId }),
+  });
+
+  const data = await resp.json().catch(() => null);
+  if (!resp.ok) {
+    throw new Error(data?.error || data?.details || `Error ${resp.status}`);
+  }
+}
+
 function Badge({ activo }: { activo: boolean }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activo ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
@@ -146,6 +209,10 @@ export default function PrestadoresAdmin() {
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM });
   const [zonasSeleccionadas, setZonasSeleccionadas] = useState<string[]>([]);
   const [zonaPersonalizada, setZonaPersonalizada] = useState('');
+  const [mostrandoInputCategoria, setMostrandoInputCategoria] = useState(false);
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>(() =>
+    mergeCategorias(CATEGORIAS, loadCategoriasExtra())
+  );
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState('');
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
@@ -167,8 +234,7 @@ export default function PrestadoresAdmin() {
   // ── Data ────────────────────────────────────────────────────
   async function obtenerPrestadoresConValoraciones(): Promise<PrestadorAdmin[]> {
     const selects = [
-      'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, enabled, trabajos_completados, created_at',
-      'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at',
+      PRESTADORES_BASE_SELECT,
       'id, nombre, apellido, dni, email, categoria, foto_url, galeria_urls, descripcion, created_at',
       'id, nombre, apellido, dni, email, categoria',
     ];
@@ -229,6 +295,7 @@ export default function PrestadoresAdmin() {
     try {
       const data = await obtenerPrestadoresConValoraciones();
       setPrestadores(data);
+      setCategoriasDisponibles((actuales) => mergeCategorias(actuales, data.map((p) => p.categoria)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al cargar prestadores');
     } finally {
@@ -258,6 +325,22 @@ export default function PrestadoresAdmin() {
   const syncZonaForm = (zonas: string[]) => {
     setZonasSeleccionadas(zonas);
     setForm((prev) => ({ ...prev, zona: zonas.join(', ') }));
+  };
+
+  const registrarCategoriaSiEsNueva = (categoria: string) => {
+    const clean = categoria.trim();
+    if (!clean) return;
+
+    setCategoriasDisponibles((actuales) => {
+      const next = mergeCategorias(actuales, [clean]);
+      if (next.length === actuales.length) return actuales;
+
+      const extras = next.filter((cat) =>
+        !CATEGORIAS.some((base) => normalizeCategoria(base) === normalizeCategoria(cat))
+      );
+      saveCategoriasExtra(extras);
+      return next;
+    });
   };
 
   const toggleZona = (zona: string) => {
@@ -345,6 +428,7 @@ export default function PrestadoresAdmin() {
     setForm({ ...EMPTY_FORM });
     setZonasSeleccionadas([]);
     setZonaPersonalizada('');
+    setMostrandoInputCategoria(false);
     setFotoFile(null);
     setFotoPreview('');
     setGaleriaFiles([]);
@@ -362,6 +446,9 @@ export default function PrestadoresAdmin() {
       enabled: p.enabled ?? true,
       trabajos_completados: p.trabajos_completados ?? 0,
     });
+    setMostrandoInputCategoria(
+      !categoriasDisponibles.some((cat) => normalizeCategoria(cat) === normalizeCategoria(p.categoria))
+    );
     setZonasSeleccionadas(
       p.zona
         ? p.zona.split(',').map((z) => z.trim()).filter(Boolean)
@@ -380,6 +467,14 @@ export default function PrestadoresAdmin() {
   async function guardar() {
     if (!form.nombre.trim() || !form.apellido.trim() || !form.dni.trim()) {
       showToast('Nombre, apellido y DNI son obligatorios', false);
+      return;
+    }
+    const categoriaFinal = form.categoria.trim();
+    if (!categoriaFinal) {
+      showToast(
+        mostrandoInputCategoria ? 'Escribí el nombre de la categoría personalizada' : 'Seleccioná una categoría',
+        false
+      );
       return;
     }
     if (zonasSeleccionadas.length === 0) {
@@ -435,7 +530,7 @@ export default function PrestadoresAdmin() {
         dni: form.dni.trim(),
         email: form.email.trim(),
         telefono: form.telefono?.trim() || null,
-        categoria: form.categoria,
+        categoria: categoriaFinal,
         zona: zonasSeleccionadas.join(', '),
         foto_url: fotoUrl,
         galeria_urls: galeriaUrls.length ? galeriaUrls : null,
@@ -453,6 +548,7 @@ export default function PrestadoresAdmin() {
         showToast('Prestador creado correctamente ✓');
       }
 
+      registrarCategoriaSiEsNueva(categoriaFinal);
       setModalForm(false);
       setFotoFile(null);
       setFotoPreview('');
@@ -473,8 +569,7 @@ export default function PrestadoresAdmin() {
     try {
       const { tipo, prestador } = confirmModal;
       if (tipo === 'eliminar') {
-        const { error: err } = await supabase.from('prestadores').delete().eq('id', prestador.id);
-        if (err) throw err;
+        await deletePrestadorCompleto(prestador.id);
         showToast('Prestador eliminado');
         if (modalVals?.id === prestador.id) setModalVals(null);
       } else {
@@ -803,12 +898,34 @@ export default function PrestadoresAdmin() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1.5">Categoría</label>
-                  <select value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-                    className={inp} style={{ fontSize: '16px' }}>
-                    {CATEGORIAS.map((c) => (
+                  <select
+                    value={mostrandoInputCategoria ? CATEGORIA_CUSTOM : form.categoria}
+                    onChange={(e) => {
+                      if (e.target.value === CATEGORIA_CUSTOM) {
+                        setMostrandoInputCategoria(true);
+                        setForm((f) => ({ ...f, categoria: '' }));
+                      } else {
+                        setMostrandoInputCategoria(false);
+                        setForm((f) => ({ ...f, categoria: e.target.value }));
+                      }
+                    }}
+                    className={inp} style={{ fontSize: '16px' }}
+                  >
+                    <option value={CATEGORIA_CUSTOM}>Otra categoría...</option>
+                    {categoriasDisponibles.map((c) => (
                       <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                     ))}
                   </select>
+                  {mostrandoInputCategoria && (
+                    <input
+                      value={form.categoria}
+                      onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
+                      placeholder="Escribí la nueva categoría"
+                      className={`${inp} mt-2`}
+                      style={{ fontSize: '16px' }}
+                      autoFocus
+                    />
+                  )}
                 </div>
               </div>
 

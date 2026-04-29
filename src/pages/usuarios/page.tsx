@@ -151,14 +151,29 @@ export default function Usuarios() {
   const [mensajeExito, setMensajeExito] = useState('');
   const [mostrarValoraciones, setMostrarValoraciones] = useState<string | null>(null);
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
+  const [categoriasExtra, setCategoriasExtra] = useState<string[]>([]);
 
   const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
   useEffect(() => {
     cargarPrestadores();
+    cargarCategoriasExtra();
     if (clienteDni) cargarPuntosUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const cargarCategoriasExtra = async () => {
+    try {
+      const { data } = await supabase.from('prestadores').select('categoria');
+      if (!data) return;
+      const conocidas = new Set(categorias);
+      const extras = [...new Set(data.map((p: { categoria: string }) => p.categoria))]
+        .filter((c) => c && !conocidas.has(c));
+      setCategoriasExtra(extras);
+    } catch {
+      // si falla, simplemente no se muestran categorías extra
+    }
+  };
 
   const cargarPuntosUsuario = async () => {
     if (!clienteDni) return;
@@ -438,6 +453,11 @@ export default function Usuarios() {
                 {categorias.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat === 'todas' ? 'Todas las categorías' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </option>
+                ))}
+                {categoriasExtra.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </option>
                 ))}
               </select>

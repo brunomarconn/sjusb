@@ -173,7 +173,7 @@ export default function ReservarPage() {
       const turnoStr = turnoSeleccionado === 'mañana' ? 'Mañana' : 'Tarde';
 
       // ── 1. Construir y abrir WhatsApp PRIMERO (no depende de nada externo) ──
-      const mensaje = `Hola! Me comunico desde *MServicios* para hacer una reserva 📅
+      const mensaje = `Hola! Me comunico desde *ServiciosYa* para hacer una reserva 📅
 
 👤 *Nombre:* ${nombre.trim()} ${apellido.trim()}
 📅 *Día:* ${diaStr}
@@ -505,7 +505,7 @@ export default function ReservarPage() {
             onClick={() => {
               const telefonos = ['3513227999', '3516576801', '3512178797'];
               const telefonoAleatorio = telefonos[Math.floor(Math.random() * telefonos.length)];
-              const mensaje = encodeURIComponent(`Hola! Me contacto desde *MServicios*. Me interesa el servicio de *${prestador.categoria}* de *${prestador.nombre}* *${prestador.apellido}*. ¿Cuándo tiene disponibilidad?`);
+              const mensaje = encodeURIComponent(`Hola! Me contacto desde *ServiciosYa*. Me interesa el servicio de *${prestador.categoria}* de *${prestador.nombre}* *${prestador.apellido}*. ¿Cuándo tiene disponibilidad?`);
               window.open(`https://wa.me/549${telefonoAleatorio}?text=${mensaje}`, '_blank');
             }} 
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors"

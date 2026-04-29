@@ -108,7 +108,7 @@ export default function PagarPage() {
               <div className="w-16 h-16 bg-[#e2b040]/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <i className="ri-bank-card-line text-3xl text-[#e2b040]" />
               </div>
-              <h1 className="text-xl font-bold text-white">MServicios Pay</h1>
+              <h1 className="text-xl font-bold text-white">ServiciosYa Pay</h1>
               <p className="text-gray-400 text-sm">Pasarela de pago segura</p>
             </div>
 

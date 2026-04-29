@@ -355,7 +355,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
             <div className="w-9 h-9 bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-lg flex items-center justify-center flex-shrink-0">
               <i className="ri-tools-line text-lg text-[#1a1a2e]"></i>
             </div>
-            <span className="text-lg font-bold text-white hidden sm:block">MServicios</span>
+            <span className="text-lg font-bold text-white hidden sm:block">ServiciosYa</span>
           </div>
 
           <div className="flex items-center gap-2">

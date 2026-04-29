@@ -1,5 +1,5 @@
 -- ============================================================
--- MServicios — Sistema de Chat Interno
+-- ServiciosYa — Sistema de Chat Interno
 -- Una conversación por orden (cliente ↔ prestador, con contexto)
 -- ============================================================
 

@@ -88,10 +88,10 @@ export default function PanelUsuario({ clienteDni, onCerrarSesion }: PanelUsuari
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
             <img
               src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-              alt="MServicios"
+              alt="ServiciosYa"
               className="w-9 h-9 object-contain"
             />
-            <span className="text-base font-bold text-[#e2b040] hidden sm:block">MServicios</span>
+            <span className="text-base font-bold text-[#e2b040] hidden sm:block">ServiciosYa</span>
           </div>
           <div className="flex items-center gap-2">
             <button

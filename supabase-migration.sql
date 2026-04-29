@@ -1,4 +1,4 @@
--- MServicios - Migraciones de base de datos Supabase
+-- ServiciosYa - Migraciones de base de datos Supabase
 -- Ejecutar en el SQL Editor de tu proyecto en https://supabase.com
 
 -- 1. Agregar columna password a la tabla clientes

@@ -48,7 +48,7 @@ export class MercadoPagoProvider implements PaymentProvider {
       notification_url: input.webhookUrl,
       // Guardamos el ID de nuestra orden para identificarla al recibir el webhook
       external_reference: input.ordenId,
-      statement_descriptor: 'MSERVICIOS',
+      statement_descriptor: 'SERVICIOSYA',
       auto_return: 'approved',
       expires: false,
     };
