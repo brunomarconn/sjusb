@@ -1,20 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { CATEGORIAS_SERVICIOS } from '../../../constants/categorias';
 
 interface RegistroPrestadorProps {
   onRegistroExitoso: (dni: string) => void;
   onVolverLogin: () => void;
 }
 
-const categorias = [
-  'electricista', 'jardinero', 'piletero', 'albañil', 'bicicletero',
-  'pintor', 'gasista', 'plomero', 'forrajería', 'peluquería canina',
-  'mantenimiento aire acondicionado', 'impermeabilizador hogar',
-  'alquiler vajilla', 'pastelería', 'cambio de baterías',
-  'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular', 'servicios de catering', 'Servicio Técnico Informático'
-];
+const categorias = CATEGORIAS_SERVICIOS;
 
 const zonas = [
   'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán'

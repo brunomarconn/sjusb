@@ -1,0 +1,28 @@
+export const CATEGORIAS_SERVICIOS = [
+  'electricista',
+  'jardinero',
+  'piletero',
+  'albañil',
+  'bicicletero',
+  'pintor',
+  'gasista',
+  'plomero',
+  'forrajería',
+  'peluquería canina',
+  'Servicio Técnico de Electrodomésticos',
+  'impermeabilizador hogar',
+  'alquiler vajilla',
+  'pastelería',
+  'cambio de baterías',
+  'limpieza de tapizados',
+  'personal trainer',
+  'adiestrador de perros',
+  'maestro particular',
+  'cuidador canino profesional',
+  'limpieza de autos',
+  'carpintero',
+  'servicios de catering',
+  'Servicio Técnico Informático',
+];
+
+export const CATEGORIAS_FILTRO_USUARIOS = ['todas', ...CATEGORIAS_SERVICIOS];

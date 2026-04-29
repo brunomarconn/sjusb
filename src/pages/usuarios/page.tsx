@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
 import AppHeader from '../../components/AppHeader';
+import { CATEGORIAS_FILTRO_USUARIOS } from '../../constants/categorias';
 
 interface Valoracion {
   id: string;
@@ -29,15 +30,7 @@ interface Prestador {
   valoraciones?: Valoracion[];
 }
 
-const categorias = [
-  'todas',
-  'electricista', 'jardinero', 'piletero', 'albañil', 'bicicletero',
-  'pintor', 'gasista', 'plomero', 'forrajería', 'peluquería canina',
-  'mantenimiento aire acondicionado', 'impermeabilizador hogar',
-  'alquiler vajilla', 'pastelería', 'cambio de baterías',
-  'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular', 'servicios de catering', 'Servicio Técnico Informático',
-];
+const categorias = CATEGORIAS_FILTRO_USUARIOS;
 
 const todasLasZonas = [
   'Sierras Chicas',
@@ -66,10 +59,19 @@ const SIERRAS_CHICAS_TOWNS = [
   'la calera', 'dumesnil', 'sierras chicas',
 ];
 
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function matchesZona(prestadorZona: string, filtro: string): boolean {
   if (!filtro.trim()) return true;
-  const zona = prestadorZona.toLowerCase();
-  const f = filtro.toLowerCase().trim();
+  const zona = normalizeText(prestadorZona);
+  const f = normalizeText(filtro);
 
   if (zona.includes(f)) return true;
 
@@ -101,6 +103,13 @@ const otrosServicios = [
 ];
 
 const RESERVADOS_KEY = 'mservicios_reservados';
+
+function splitZonas(zona?: string): string[] {
+  return (zona || '')
+    .split(',')
+    .map((z) => z.trim())
+    .filter(Boolean);
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function marcarReservado(prestadorId: string) {
@@ -314,21 +323,46 @@ export default function Usuarios() {
       <i key={s} className={`${small ? 'text-sm' : 'text-base'} ${s <= Math.round(promedio) ? 'ri-star-fill text-[#e2b040]' : 'ri-star-line text-gray-600'}`}></i>
     ));
 
-  const sugerenciasZona = todasLasZonas.filter(
-    (z) => !zonaInput.trim() || z.toLowerCase().includes(zonaInput.toLowerCase())
-  ).slice(0, 7);
+  const zonasDisponibles = (() => {
+    const zonas = new Map<string, string>();
+
+    for (const prestador of prestadores) {
+      for (const zona of splitZonas(prestador.zona)) {
+        zonas.set(normalizeText(zona), zona);
+      }
+    }
+
+    const tieneSierrasChicas = [...zonas.keys()].some((zona) =>
+      SIERRAS_CHICAS_TOWNS.some((town) => zona.includes(normalizeText(town)))
+    );
+    if (tieneSierrasChicas) zonas.set('sierras chicas', 'Sierras Chicas');
+
+    if (zonas.size === 0) {
+      for (const zona of todasLasZonas) zonas.set(normalizeText(zona), zona);
+    }
+
+    return [...zonas.values()].sort((a, b) => a.localeCompare(b, 'es'));
+  })();
+
+  const sugerenciasZona = zonasDisponibles.filter(
+    (z) => !zonaInput.trim() || normalizeText(z).includes(normalizeText(zonaInput))
+  ).slice(0, 8);
 
   const hayFiltrosExtra = zonaInput || categoriaFiltro !== 'todas';
 
   const prestadoresFiltrados = prestadores.filter((p) => {
-    const texto = busqueda.toLowerCase();
+    const texto = normalizeText(busqueda);
+    const haystack = normalizeText([
+      p.nombre,
+      p.apellido,
+      `${p.nombre} ${p.apellido}`,
+      p.descripcion,
+      p.categoria,
+      p.zona || '',
+    ].join(' '));
     const coincideBusqueda =
       !texto ||
-      p.nombre.toLowerCase().includes(texto) ||
-      p.apellido.toLowerCase().includes(texto) ||
-      p.descripcion.toLowerCase().includes(texto) ||
-      p.categoria.toLowerCase().includes(texto) ||
-      (p.zona || '').toLowerCase().includes(texto);
+      haystack.includes(texto);
     const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
     const coincideZona = matchesZona(p.zona || '', zonaInput);
     return coincideBusqueda && coincideCategoria && coincideZona;
@@ -346,7 +380,7 @@ export default function Usuarios() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 pt-20 sm:pt-24">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 pt-24 sm:pt-28">
 
         {/* Header del listado */}
         <div className="mb-5 sm:mb-7">
@@ -497,7 +531,7 @@ export default function Usuarios() {
               </p>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {prestadoresFiltrados.map((prestador) => {
                 const vals = prestador.valoraciones || [];
                 const promedio = calcularPromedio(vals);
@@ -508,10 +542,10 @@ export default function Usuarios() {
                 return (
                   <div
                     key={prestador.id}
-                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col"
+                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col min-w-0"
                   >
                     {/* Foto */}
-                    <div className="w-full h-52 sm:h-60 overflow-hidden relative">
+                    <div className="w-full h-36 sm:h-60 overflow-hidden relative">
                       <img
                         src={prestador.foto_url}
                         alt={`${prestador.nombre} ${prestador.apellido}`}
@@ -524,20 +558,20 @@ export default function Usuarios() {
                       />
                       <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent"></div>
                       {/* Verificado */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold text-green-400 border border-green-400/30">
+                      <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-[10px] sm:text-xs font-semibold text-green-400 border border-green-400/30">
                         <i className="ri-shield-check-fill text-xs"></i>
                         Verificado
                       </div>
                     </div>
 
-                    <div className="p-4 flex flex-col flex-1">
+                    <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
                       {/* Nombre */}
-                      <h3 className="text-base sm:text-lg font-bold text-white mb-0.5 leading-snug">
+                      <h3 className="text-sm sm:text-lg font-bold text-white mb-0.5 leading-snug break-words">
                         {prestador.nombre} {prestador.apellido}
                       </h3>
 
                       {/* Categoría · Zona */}
-                      <p className="text-sm mb-2 sm:mb-3 leading-snug">
+                      <p className="text-xs sm:text-sm mb-2 sm:mb-3 leading-snug break-words">
                         <span className="text-[#f0d080] font-medium capitalize">{prestador.categoria}</span>
                         {prestador.zona && (
                           <span className="text-gray-500"> · {prestador.zona}</span>
@@ -546,7 +580,7 @@ export default function Usuarios() {
 
                       {/* Estrellas */}
                       {vals.length > 0 && (
-                        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 sm:mb-3">
                           <div className="flex">{renderEstrellas(promedio, true)}</div>
                           <span className="text-[#e2b040] text-sm font-semibold">{promedio.toFixed(1)}</span>
                           <span className="text-gray-500 text-xs">· {vals.length} trabajo{vals.length !== 1 ? 's' : ''}</span>
@@ -554,7 +588,7 @@ export default function Usuarios() {
                       )}
 
                       {/* Descripción con expand/collapse */}
-                      <p className={`text-gray-400 text-sm leading-relaxed whitespace-pre-wrap ${descExpandida ? '' : 'line-clamp-2'}`}>
+                      <p className={`text-gray-400 text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words ${descExpandida ? '' : 'line-clamp-2'}`}>
                         {prestador.descripcion}
                       </p>
                       {prestador.descripcion && prestador.descripcion.length > 90 && (
@@ -573,15 +607,28 @@ export default function Usuarios() {
                       {/* CTA principal — WhatsApp */}
                       <button
                         onClick={() => navigate(`/reservar/${prestador.id}`)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-[#25D366] hover:bg-[#1da851] active:bg-[#178f42] text-white rounded-xl font-bold text-base transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20 min-h-[52px]"
+                        className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-3 sm:py-4 bg-[#25D366] hover:bg-[#1da851] active:bg-[#178f42] text-white rounded-xl font-bold text-xs sm:text-base transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20 min-h-[46px] sm:min-h-[52px]"
                         aria-label={`Contactar a ${prestador.nombre} por WhatsApp`}
                       >
-                        <i className="ri-whatsapp-line text-xl"></i>
-                        Contactar por WhatsApp
+                        <i className="ri-whatsapp-line text-base sm:text-xl"></i>
+                        <span className="sm:hidden">WhatsApp</span>
+                        <span className="hidden sm:inline">Contactar por WhatsApp</span>
                       </button>
 
+                      {clienteDni && (
+                        <button
+                          onClick={() => navigate(`/chat?prestador=${prestador.id}`)}
+                          className="w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 border border-[#e2b040]/45 bg-[#e2b040]/10 text-[#f0d080] hover:bg-[#e2b040]/15 rounded-lg font-semibold text-[11px] sm:text-sm transition-colors cursor-pointer mb-2 min-h-[40px]"
+                          aria-label={`Enviar mensaje a ${prestador.nombre} por la página`}
+                        >
+                          <i className="ri-message-3-line text-sm sm:text-base"></i>
+                          <span className="sm:hidden">Mensaje</span>
+                          <span className="hidden sm:inline">Enviar mensaje por la página</span>
+                        </button>
+                      )}
+
                       {/* Acciones secundarias */}
-                      <div className="flex items-center justify-between pt-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 pt-0.5">
                         {vals.length > 0 ? (
                           <button
                             onClick={() => setMostrarValoraciones(expandido ? null : prestador.id)}
@@ -612,7 +659,7 @@ export default function Usuarios() {
                                 <span className="text-white text-xs font-semibold">{v.nombre_cliente}</span>
                                 <div className="flex">{renderEstrellas(v.puntuacion, true)}</div>
                               </div>
-                              <p className="text-gray-400 text-xs leading-relaxed">{v.comentario}</p>
+                              <p className="text-gray-400 text-xs leading-relaxed whitespace-pre-line break-words">{v.comentario}</p>
                             </div>
                           ))}
                           {vals.length > 3 && (

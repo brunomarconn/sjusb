@@ -74,8 +74,8 @@ const servicios = [
       'https://readdy.ai/api/search-image?query=professional%20dog%20groomer%20grooming%20cute%20dog%20scissors%20comb%20pet%20salon%20clean%20background&width=400&height=260&seq=serv10&orientation=landscape',
   },
   {
-    nombre: 'Aire Acondicionado',
-    categoria: 'mantenimiento aire acondicionado',
+    nombre: 'Servicio Técnico de Electrodomésticos',
+    categoria: 'Servicio Técnico de Electrodomésticos',
     icono: 'ri-temp-cold-line',
     imagen:
       'https://readdy.ai/api/search-image?query=technician%20installing%20air%20conditioner%20unit%20wall%20indoor%20professional%20tools%20uniform%20maintenance&width=400&height=260&seq=serv11&orientation=landscape',

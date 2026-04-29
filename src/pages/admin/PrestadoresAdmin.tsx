@@ -1,20 +1,13 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { supabase } from '../../lib/supabase';
+import { CATEGORIAS_SERVICIOS } from '../../constants/categorias';
 
 const SUPABASE_URL = import.meta.env.VITE_PUBLIC_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY as string;
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
 // ─── Constantes ────────────────────────────────────────────────
-const CATEGORIAS = [
-  'electricista', 'jardinero', 'piletero', 'albañil', 'bicicletero',
-  'pintor', 'gasista', 'plomero', 'forrajería', 'peluquería canina',
-  'mantenimiento aire acondicionado', 'impermeabilizador hogar',
-  'alquiler vajilla', 'pastelería', 'cambio de baterías',
-  'limpieza de tapizados', 'personal trainer', 'adiestrador de perros',
-  'maestro particular', 'servicios de catering', 'carpintero',
-  'cuidador canino profesional', 'limpieza de autos', 'Servicio Técnico Informático',
-];
+const CATEGORIAS = CATEGORIAS_SERVICIOS;
 
 const ZONAS = [
   'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',

@@ -114,7 +114,7 @@ export const prestadoresMock = [
     nombre: 'Fernando Castro',
     dni: '11234567',
     email: 'fernando@email.com',
-    categoria: 'mantenimiento aire acondicionado',
+    categoria: 'Servicio Técnico de Electrodomésticos',
     foto_url: 'https://readdy.ai/api/search-image?query=professional%20air%20conditioning%20technician%20portrait%20wearing%20work%20uniform%20with%20AC%20unit%20tools%20confident%20expression%20modern%20lighting%20clean%20background%20high%20quality%20professional%20photography&width=400&height=400&seq=aire001&orientation=squarish',
     descripcion: 'Técnico especializado en instalación, mantenimiento y reparación de equipos de aire acondicionado. Service preventivo, carga de gas y limpieza profunda.',
     valoracion_promedio: 5,
