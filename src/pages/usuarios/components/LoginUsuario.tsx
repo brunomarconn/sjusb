@@ -7,34 +7,29 @@ interface LoginUsuarioProps {
   onCambiarARegistro: () => void;
 }
 
-const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
-
 export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: LoginUsuarioProps) {
   const navigate = useNavigate();
   const [dni, setDni] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
-  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!dni.trim() || !password.trim()) {
-      setError('Completá todos los campos');
+    const dniLimpio = dni.trim();
+
+    if (!dniLimpio) {
+      setError('Ingresá tu DNI');
       return;
     }
 
-    if (password.length < 5) {
-      setError('La contraseña debe tener al menos 5 caracteres');
+    if (!/^\d{7,8}$/.test(dniLimpio)) {
+      setError('El DNI debe tener 7 u 8 dígitos numéricos');
       return;
     }
 
-    if (!soloLetrasYNumeros.test(password)) {
-      setError('La contraseña no puede tener caracteres especiales');
-      return;
-    }
+    const password = dniLimpio;
 
     setCargando(true);
 
@@ -42,7 +37,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
       const { data, error: err } = await supabase
         .from('clientes')
         .select('dni, password, puntos, tiene_promocion')
-        .eq('dni', dni.trim())
+        .eq('dni', dniLimpio)
         .maybeSingle();
 
       if (err) throw err;
@@ -53,8 +48,8 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
         return;
       }
 
-      if (data.password !== password) {
-        setError('Contraseña incorrecta');
+      if (data.password && data.password !== password) {
+        setError('No pudimos ingresar con ese DNI');
         setCargando(false);
         return;
       }
@@ -85,7 +80,7 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
               <i className="ri-user-line text-2xl text-[#1a1a2e]"></i>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Iniciar Sesión</h2>
-            <p className="text-gray-400 text-sm">Ingresá con tu DNI y contraseña</p>
+            <p className="text-gray-400 text-sm">Ingresá con tu DNI</p>
           </div>
 
           {error && (
@@ -100,33 +95,13 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
               <label className="block text-sm font-medium text-gray-300 mb-2">DNI</label>
               <input
                 type="text"
+                inputMode="numeric"
                 value={dni}
                 onChange={(e) => setDni(e.target.value)}
                 className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
                 placeholder="Tu número de DNI"
                 required
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Contraseña</label>
-              <div className="relative">
-                <input
-                  type={mostrarPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors pr-12"
-                  placeholder="Mínimo 5 caracteres"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2b040] cursor-pointer"
-                >
-                  <i className={mostrarPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
-                </button>
-              </div>
             </div>
 
             <button
