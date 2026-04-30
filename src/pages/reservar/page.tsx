@@ -474,6 +474,42 @@ export default function ReservarPage() {
               </div>
             )}
 
+            {/* Checklist de requisitos pendientes */}
+            {(() => {
+              const faltantes: { icon: string; texto: string }[] = [];
+              if (!diaSeleccionado)
+                faltantes.push({ icon: 'ri-calendar-line', texto: 'Seleccioná una fecha en el calendario' });
+              if (diaSeleccionado && !turnoSeleccionado)
+                faltantes.push({ icon: 'ri-time-line', texto: 'Elegí un turno: mañana o tarde' });
+              if (!nombre.trim())
+                faltantes.push({ icon: 'ri-user-line', texto: 'Ingresá tu nombre' });
+              if (!apellido.trim())
+                faltantes.push({ icon: 'ri-user-line', texto: 'Ingresá tu apellido' });
+              if (telefono.replace(/\D/g, '').length < 10)
+                faltantes.push({ icon: 'ri-phone-line', texto: 'Teléfono incompleto (mínimo 10 dígitos)' });
+
+              if (faltantes.length === 0) return null;
+
+              return (
+                <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
+                  <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <i className="ri-information-line text-[#e2b040]" />
+                    Para continuar, completá:
+                  </p>
+                  <ul className="space-y-2">
+                    {faltantes.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2.5 text-sm text-gray-400">
+                        <span className="w-5 h-5 rounded-full border border-white/15 flex items-center justify-center flex-shrink-0">
+                          <i className={`${f.icon} text-[10px] text-gray-500`} />
+                        </span>
+                        {f.texto}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
+
             <button
               type="submit"
               disabled={!diaSeleccionado || !turnoSeleccionado || !nombre.trim() || !apellido.trim() || telefono.replace(/\D/g,'').length < 10 || !!errorTelefono || enviando}
