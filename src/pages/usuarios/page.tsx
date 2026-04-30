@@ -425,11 +425,23 @@ export default function Usuarios() {
       }
     }
 
-    return base.filter((p) => {
-      const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
-      const coincideZona = matchesZona(p.zona || '', zonaInput);
-      return coincideCategoria && coincideZona;
-    });
+    return base
+      .filter((p) => {
+        const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
+        const coincideZona = matchesZona(p.zona || '', zonaInput);
+        return coincideCategoria && coincideZona;
+      })
+      .sort((a, b) => {
+        const promedioA = calcularPromedio(a.valoraciones || []);
+        const promedioB = calcularPromedio(b.valoraciones || []);
+        if (promedioB !== promedioA) return promedioB - promedioA;
+
+        const cantidadA = a.valoraciones?.length || 0;
+        const cantidadB = b.valoraciones?.length || 0;
+        if (cantidadB !== cantidadA) return cantidadB - cantidadA;
+
+        return `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`, 'es');
+      });
   }, [prestadores, busqueda, categoriaFiltro, zonaInput, fuseInstance]);
 
   return (
