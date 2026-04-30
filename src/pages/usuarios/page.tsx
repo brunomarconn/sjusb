@@ -354,21 +354,34 @@ export default function Usuarios() {
 
   const hayFiltrosExtra = zonaInput || categoriaFiltro !== 'todas';
 
-  // Índice Fuse: se reconstruye solo cuando cambia la lista de prestadores
+  // Índice Fuse: se reconstruye solo cuando cambia la lista de prestadores.
+  // La zona se expande: si el prestador cubre "Sierras Chicas", se indexan
+  // también todas las localidades miembro para que "villa allende" encuentre
+  // prestadores que pusieron "Sierras Chicas" como zona.
   const fuseInstance = useMemo(() => {
-    const items = prestadores.map((p) => ({
-      ...p,
-      _cat_norm: normalizeText(p.categoria),
-      _desc_norm: normalizeText(p.descripcion || ''),
-      _nombre_norm: normalizeText(`${p.nombre} ${p.apellido}`),
-      _tags: (SINONIMOS_PROFESIONES[normalizeText(p.categoria)] ?? []).join(' '),
-    }));
+    const items = prestadores.map((p) => {
+      const zonasExpandidas = splitZonas(p.zona).flatMap((z) => {
+        const zn = normalizeText(z);
+        return zn === 'sierras chicas' ? [...SIERRAS_CHICAS_TOWNS] : [zn];
+      });
+
+      return {
+        ...p,
+        _cat_norm: normalizeText(p.categoria),
+        _desc_norm: normalizeText(p.descripcion || ''),
+        _nombre_norm: normalizeText(`${p.nombre} ${p.apellido}`),
+        _tags: (SINONIMOS_PROFESIONES[normalizeText(p.categoria)] ?? []).join(' '),
+        _zona_norm: zonasExpandidas.join(' '),
+      };
+    });
+
     return new Fuse(items, {
       keys: [
-        { name: '_cat_norm', weight: 0.4 },
-        { name: '_tags', weight: 0.4 },
-        { name: '_desc_norm', weight: 0.15 },
-        { name: '_nombre_norm', weight: 0.05 },
+        { name: '_cat_norm', weight: 0.35 },
+        { name: '_tags',     weight: 0.35 },
+        { name: '_zona_norm', weight: 0.2 },
+        { name: '_desc_norm', weight: 0.07 },
+        { name: '_nombre_norm', weight: 0.03 },
       ],
       threshold: 0.4,
       includeScore: true,
@@ -377,34 +390,35 @@ export default function Usuarios() {
 
   const prestadoresFiltrados = useMemo(() => {
     const texto = normalizeText(busqueda);
-    // Tokens de 2+ chars para ignorar artículos sueltos ("de", "a", "y")
     const tokens = texto.split(/\s+/).filter((t) => t.length >= 2);
 
     let base: Prestador[];
 
     if (!tokens.length) {
-      // Sin búsqueda: mostrar todos
       base = prestadores;
     } else if (tokens.length === 1) {
-      // Una sola palabra: Fuse con tolerancia a errores de tipeo
+      // Una sola palabra: Fuse (zona ya indexada con expansión de Sierras Chicas)
       base = fuseInstance.search(texto).map((r) => r.item as Prestador);
     } else {
-      // Múltiples palabras: cada token debe aparecer en algún campo del prestador.
-      // Así "lucas villa allende" encuentra a Lucas en Villa Allende,
-      // y "marcelo jardinero" encuentra al jardinero Marcelo.
-      base = prestadores.filter((p) => {
-        const haystack = normalizeText([
+      // Múltiples palabras: cada token debe matchear en ALGÚN campo del prestador.
+      // Para zona usamos matchesZona (maneja Sierras Chicas ↔ localidades miembro).
+      const haystack = (p: Prestador) =>
+        normalizeText([
           p.nombre,
           p.apellido,
           p.categoria,
-          p.zona || '',
           p.descripcion || '',
           ...(SINONIMOS_PROFESIONES[normalizeText(p.categoria)] ?? []),
         ].join(' '));
-        return tokens.every((token) => haystack.includes(token));
+
+      base = prestadores.filter((p) => {
+        const hs = haystack(p);
+        return tokens.every(
+          (token) => hs.includes(token) || matchesZona(p.zona || '', token)
+        );
       });
 
-      // Fallback: si el AND estricto no encuentra nada (ej. hay errores de tipeo),
+      // Fallback: si el AND estricto no encuentra nada (ej. error de tipeo),
       // cae a Fuse sobre el query completo
       if (base.length === 0) {
         base = fuseInstance.search(texto).map((r) => r.item as Prestador);
