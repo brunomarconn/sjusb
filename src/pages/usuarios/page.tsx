@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Fuse from 'fuse.js';
 import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
 import AppHeader from '../../components/AppHeader';
 import { CATEGORIAS_FILTRO_USUARIOS } from '../../constants/categorias';
+import { SINONIMOS_PROFESIONES } from '../../constants/sinonimos';
 
 interface Valoracion {
   id: string;
@@ -142,7 +144,9 @@ export default function Usuarios() {
   const [searchParams] = useSearchParams();
 
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
+  const [inputValue, setInputValue] = useState(() => searchParams.get('q') || '');
   const [busqueda, setBusqueda] = useState(() => searchParams.get('q') || '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [categoriaFiltro, setCategoriaFiltro] = useState(() => searchParams.get('categoria') || 'todas');
   const [zonaInput, setZonaInput] = useState('');
   const [mostrarSugerenciasZona, setMostrarSugerenciasZona] = useState(false);
@@ -350,23 +354,43 @@ export default function Usuarios() {
 
   const hayFiltrosExtra = zonaInput || categoriaFiltro !== 'todas';
 
-  const prestadoresFiltrados = prestadores.filter((p) => {
+  // Índice Fuse: se reconstruye solo cuando cambia la lista de prestadores
+  const fuseInstance = useMemo(() => {
+    const items = prestadores.map((p) => ({
+      ...p,
+      _cat_norm: normalizeText(p.categoria),
+      _desc_norm: normalizeText(p.descripcion || ''),
+      _nombre_norm: normalizeText(`${p.nombre} ${p.apellido}`),
+      _tags: (SINONIMOS_PROFESIONES[normalizeText(p.categoria)] ?? []).join(' '),
+    }));
+    return new Fuse(items, {
+      keys: [
+        { name: '_cat_norm', weight: 0.4 },
+        { name: '_tags', weight: 0.4 },
+        { name: '_desc_norm', weight: 0.15 },
+        { name: '_nombre_norm', weight: 0.05 },
+      ],
+      threshold: 0.4,
+      includeScore: true,
+    });
+  }, [prestadores]);
+
+  const prestadoresFiltrados = useMemo(() => {
     const texto = normalizeText(busqueda);
-    const haystack = normalizeText([
-      p.nombre,
-      p.apellido,
-      `${p.nombre} ${p.apellido}`,
-      p.descripcion,
-      p.categoria,
-      p.zona || '',
-    ].join(' '));
-    const coincideBusqueda =
-      !texto ||
-      haystack.includes(texto);
-    const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
-    const coincideZona = matchesZona(p.zona || '', zonaInput);
-    return coincideBusqueda && coincideCategoria && coincideZona;
-  });
+
+    let base: Prestador[];
+    if (!texto) {
+      base = prestadores;
+    } else {
+      base = fuseInstance.search(texto).map((r) => r.item as Prestador);
+    }
+
+    return base.filter((p) => {
+      const coincideCategoria = categoriaFiltro === 'todas' || p.categoria === categoriaFiltro;
+      const coincideZona = matchesZona(p.zona || '', zonaInput);
+      return coincideCategoria && coincideZona;
+    });
+  }, [prestadores, busqueda, categoriaFiltro, zonaInput, fuseInstance]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
@@ -403,8 +427,13 @@ export default function Usuarios() {
               <i className="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
               <input
                 type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                value={inputValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInputValue(val);
+                  if (debounceRef.current) clearTimeout(debounceRef.current);
+                  debounceRef.current = setTimeout(() => setBusqueda(val), 300);
+                }}
                 className="w-full pl-10 pr-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
                 placeholder="Buscar servicio, nombre, zona..."
                 style={{ fontSize: '16px' }}
@@ -681,7 +710,7 @@ export default function Usuarios() {
                 <p className="text-gray-500 text-sm mb-6">Próximamente más opciones en tu zona. Podés intentar con otros términos.</p>
                 {(busqueda || categoriaFiltro !== 'todas' || zonaInput) && (
                   <button
-                    onClick={() => { setBusqueda(''); setCategoriaFiltro('todas'); setZonaInput(''); }}
+                    onClick={() => { setInputValue(''); setBusqueda(''); setCategoriaFiltro('todas'); setZonaInput(''); }}
                     className="min-h-[48px] px-6 py-3 border border-[#e2b040]/40 text-[#e2b040] rounded-xl hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
                   >
                     <i className="ri-close-circle-line mr-2"></i>Limpiar filtros
@@ -704,6 +733,7 @@ export default function Usuarios() {
                       key={s.cat}
                       onClick={() => {
                         setCategoriaFiltro(s.cat);
+                        setInputValue('');
                         setBusqueda('');
                         setZonaInput('');
                         window.scrollTo({ top: 0, behavior: 'smooth' });

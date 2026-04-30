@@ -210,6 +210,36 @@ const chipsPopulares = [
   { label: 'Peluquería Canina', cat: 'peluquería canina' },
 ];
 
+const aliasesBusqueda: Record<string, string[]> = {
+  'limpieza de autos': ['lavado', 'lavadero', 'lavado de autos', 'limpieza auto', 'limpieza de auto', 'car detailing', 'detailing'],
+};
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function servicioCoincideBusqueda(
+  servicio: { nombre: string; categoria: string },
+  busqueda: string
+): boolean {
+  const texto = normalizeText(busqueda);
+  if (!texto) return false;
+
+  const aliases = aliasesBusqueda[servicio.categoria] || [];
+  const haystack = normalizeText([
+    servicio.nombre,
+    servicio.categoria,
+    ...aliases,
+  ].join(' '));
+
+  return haystack.includes(texto);
+}
+
 export default function Inicio() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -218,11 +248,7 @@ export default function Inicio() {
 
   const sugerencias = busqueda.trim()
     ? servicios
-        .filter(
-          (s) =>
-            s.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-            s.categoria.toLowerCase().includes(busqueda.toLowerCase())
-        )
+        .filter((s) => servicioCoincideBusqueda(s, busqueda))
         .slice(0, 5)
     : [];
 
