@@ -7,44 +7,41 @@ interface RegistroUsuarioProps {
   onCambiarALogin: () => void;
 }
 
-const soloLetrasYNumeros = /^[a-zA-Z0-9]+$/;
-
 export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: RegistroUsuarioProps) {
   const navigate = useNavigate();
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [dni, setDni] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmar, setConfirmar] = useState('');
+  const [confirmarDni, setConfirmarDni] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
-  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!dni.trim() || !password.trim() || !confirmar.trim()) {
+    const dniLimpio = dni.trim();
+    const confirmarDniLimpio = confirmarDni.trim();
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+
+    if (!nombre.trim() || !apellido.trim() || !dniLimpio || !confirmarDniLimpio || !telefonoLimpio) {
       setError('Completá todos los campos obligatorios');
       return;
     }
 
-    if (!/^\d{7,8}$/.test(dni.trim())) {
+    if (!/^\d{7,8}$/.test(dniLimpio)) {
       setError('El DNI debe tener 7 u 8 dígitos numéricos');
       return;
     }
 
-    if (password.length < 5) {
-      setError('La contraseña debe tener al menos 5 caracteres');
+    if (dniLimpio !== confirmarDniLimpio) {
+      setError('Los DNI no coinciden');
       return;
     }
 
-    if (!soloLetrasYNumeros.test(password)) {
-      setError('La contraseña no puede tener caracteres especiales');
-      return;
-    }
-
-    if (password !== confirmar) {
-      setError('Las contraseñas no coinciden');
+    if (telefonoLimpio.length < 10) {
+      setError('Ingresá un número de teléfono válido');
       return;
     }
 
@@ -54,7 +51,7 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
       const { data: existente } = await supabase
         .from('clientes')
         .select('dni')
-        .eq('dni', dni.trim())
+        .eq('dni', dniLimpio)
         .maybeSingle();
 
       if (existente) {
@@ -63,19 +60,23 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
         return;
       }
 
+      const payload = {
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        dni: dniLimpio,
+        telefono: telefonoLimpio,
+        password: dniLimpio,
+        puntos: 0,
+        tiene_promocion: false,
+      };
+
       const { error: insertError } = await supabase
         .from('clientes')
-        .insert([{
-          dni: dni.trim(),
-          email: email.trim().toLowerCase() || null,
-          password,
-          puntos: 0,
-          tiene_promocion: false,
-        }]);
+        .insert([payload]);
 
       if (insertError) throw insertError;
 
-      onRegistroExitoso(dni.trim());
+      onRegistroExitoso(dniLimpio);
     } catch (e) {
       console.error('Error al registrar:', e);
       setError('Error al crear la cuenta. Intentá nuevamente.');
@@ -95,8 +96,8 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
           <span className="text-sm">Volver al inicio</span>
         </button>
 
-        <div className="bg-[#16213e]/80 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 p-8">
-          <div className="text-center mb-8">
+        <div className="bg-[#16213e]/80 backdrop-blur-sm rounded-2xl border border-[#e2b040]/20 p-5 sm:p-8">
+          <div className="text-center mb-9">
             <div className="w-16 h-16 bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="ri-user-add-line text-2xl text-[#1a1a2e]"></i>
             </div>
@@ -104,81 +105,96 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
             <p className="text-gray-400 text-sm">Registrate y empezá a acumular puntos</p>
           </div>
 
-          {/* Points info banner */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-[#e2b040]/10 border border-[#e2b040]/20 rounded-lg mb-6 text-sm text-[#f0d080]">
-            <i className="ri-medal-line text-[#e2b040] text-base shrink-0"></i>
-            <span>¡Con <strong>5 puntos</strong> obtenés un <strong>10% de descuento</strong> en servicios!</span>
-          </div>
-
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-5 text-sm flex items-center gap-2">
               <i className="ri-error-warning-line"></i>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                DNI <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="Tu número de DNI (7 u 8 dígitos)"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email <span className="text-gray-500 text-xs">(opcional, para recupero de cuenta)</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="tu@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Contraseña <span className="text-red-400">*</span>{' '}
-                <span className="text-gray-500 text-xs">(mín. 5 caracteres, sin símbolos)</span>
-              </label>
-              <div className="relative">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Nombre <span className="text-red-400">*</span>
+                </label>
                 <input
-                  type={mostrarPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors pr-12"
-                  placeholder="Mínimo 5 caracteres"
+                  type="text"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Juan"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e2b040] cursor-pointer"
-                >
-                  <i className={mostrarPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
-                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Apellido <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Pérez"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="px-4 sm:px-5 py-4 sm:py-5 bg-[#e2b040]/10 border border-[#e2b040]/25 rounded-lg text-xs sm:text-sm text-[#f0d080] leading-relaxed">
+              <div className="flex items-start gap-2.5 mb-5">
+                <i className="ri-shield-keyhole-line text-[#e2b040] text-base shrink-0 mt-0.5"></i>
+                <span>
+                  <strong>Tu DNI será tu usuario y contraseña</strong> para ingresar al sistema. No necesitás recordar nada más.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    DNI <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={dni}
+                    onChange={(e) => setDni(e.target.value)}
+                    className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                    placeholder="Número de DNI"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Confirmar DNI <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={confirmarDni}
+                    onChange={(e) => setConfirmarDni(e.target.value)}
+                    className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                    placeholder="Repetí tu DNI"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Confirmar contraseña <span className="text-red-400">*</span>
+                Número de teléfono <span className="text-red-400">*</span>
               </label>
               <input
-                type={mostrarPassword ? 'text' : 'password'}
-                value={confirmar}
-                onChange={(e) => setConfirmar(e.target.value)}
+                type="tel"
+                inputMode="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
                 className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
-                placeholder="Repetí la contraseña"
+                placeholder="5493512345678"
                 required
               />
             </div>
@@ -186,7 +202,7 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
             <button
               type="submit"
               disabled={cargando}
-              className="w-full py-3 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-bold hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all duration-300 disabled:opacity-60 whitespace-nowrap cursor-pointer"
+              className="w-full py-3.5 bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] rounded-lg font-bold hover:shadow-lg hover:shadow-[#e2b040]/30 transition-all duration-300 disabled:opacity-60 whitespace-nowrap cursor-pointer"
             >
               {cargando ? (
                 <span className="flex items-center justify-center gap-2">
@@ -198,7 +214,7 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
             </button>
           </form>
 
-          <p className="text-center text-gray-400 text-sm mt-6">
+          <p className="text-center text-gray-400 text-sm mt-8">
             ¿Ya tenés cuenta?{' '}
             <button
               onClick={onCambiarALogin}

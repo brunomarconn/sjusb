@@ -20,7 +20,12 @@ ALTER TABLE valoraciones ADD COLUMN IF NOT EXISTS cliente_email TEXT;
 -- 6. Agregar columna dni a la tabla clientes (para login con DNI)
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dni TEXT UNIQUE;
 
--- 7. Actualizar puntosParaPromo: el campo tiene_promocion se activa con 5 puntos ahora
+-- 7. Agregar datos básicos de contacto a clientes
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS nombre TEXT;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS apellido TEXT;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefono TEXT;
+
+-- 8. Actualizar puntosParaPromo: el campo tiene_promocion se activa con 5 puntos ahora
 -- (esto es lógica de aplicación, no necesita migración SQL)
 
 -- Verificar la estructura de las tablas:
