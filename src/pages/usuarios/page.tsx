@@ -377,12 +377,38 @@ export default function Usuarios() {
 
   const prestadoresFiltrados = useMemo(() => {
     const texto = normalizeText(busqueda);
+    // Tokens de 2+ chars para ignorar artículos sueltos ("de", "a", "y")
+    const tokens = texto.split(/\s+/).filter((t) => t.length >= 2);
 
     let base: Prestador[];
-    if (!texto) {
+
+    if (!tokens.length) {
+      // Sin búsqueda: mostrar todos
       base = prestadores;
-    } else {
+    } else if (tokens.length === 1) {
+      // Una sola palabra: Fuse con tolerancia a errores de tipeo
       base = fuseInstance.search(texto).map((r) => r.item as Prestador);
+    } else {
+      // Múltiples palabras: cada token debe aparecer en algún campo del prestador.
+      // Así "lucas villa allende" encuentra a Lucas en Villa Allende,
+      // y "marcelo jardinero" encuentra al jardinero Marcelo.
+      base = prestadores.filter((p) => {
+        const haystack = normalizeText([
+          p.nombre,
+          p.apellido,
+          p.categoria,
+          p.zona || '',
+          p.descripcion || '',
+          ...(SINONIMOS_PROFESIONES[normalizeText(p.categoria)] ?? []),
+        ].join(' '));
+        return tokens.every((token) => haystack.includes(token));
+      });
+
+      // Fallback: si el AND estricto no encuentra nada (ej. hay errores de tipeo),
+      // cae a Fuse sobre el query completo
+      if (base.length === 0) {
+        base = fuseInstance.search(texto).map((r) => r.item as Prestador);
+      }
     }
 
     return base.filter((p) => {
