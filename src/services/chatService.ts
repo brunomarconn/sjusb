@@ -26,8 +26,8 @@ function baseHeaders(extra?: Record<string, string>): HeadersInit {
 }
 
 function adminHeaders(): HeadersInit {
-  if (!ADMIN_SECRET) throw new Error('VITE_ADMIN_SECRET no configurada');
-  return baseHeaders({ 'x-admin-secret': ADMIN_SECRET });
+  if (ADMIN_SECRET) return baseHeaders({ 'x-admin-secret': ADMIN_SECRET });
+  return baseHeaders();
 }
 
 function authHeaders(auth: Auth): HeadersInit {

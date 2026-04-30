@@ -1,6 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import AppHeader from '../../components/AppHeader';
+import serviciosDeCateringImg from '../../../images/serviciosdecatering.png';
+import servicioTecnicoInformaticoImg from '../../../images/serviciotecnicoinformatico.png';
+import tecnicoElectrodomesticosImg from '../../../images/tecnicoelectrodomesticos.jpeg';
+import modistaImg from '../../../images/modista.jpeg';
 
 const servicios = [
   {
@@ -60,11 +64,10 @@ const servicios = [
       'https://readdy.ai/api/search-image?query=plumber%20fixing%20pipes%20under%20sink%20wrench%20tools%20professional%20work%20bathroom%20close%20up&width=400&height=260&seq=serv08&orientation=landscape',
   },
   {
-    nombre: 'Forrajería',
-    categoria: 'forrajería',
-    icono: 'ri-seedling-line',
-    imagen:
-      'https://readdy.ai/api/search-image?query=animal%20feed%20store%20hay%20bales%20grain%20sacks%20farm%20supply%20shop%20rustic%20warm%20light&width=400&height=260&seq=serv09&orientation=landscape',
+    nombre: 'Modista',
+    categoria: 'modista',
+    icono: 'ri-scissors-line',
+    imagen: modistaImg,
   },
   {
     nombre: 'Peluquería Canina',
@@ -77,8 +80,7 @@ const servicios = [
     nombre: 'Servicio Técnico de Electrodomésticos',
     categoria: 'Servicio Técnico de Electrodomésticos',
     icono: 'ri-temp-cold-line',
-    imagen:
-      'https://readdy.ai/api/search-image?query=technician%20installing%20air%20conditioner%20unit%20wall%20indoor%20professional%20tools%20uniform%20maintenance&width=400&height=260&seq=serv11&orientation=landscape',
+    imagen: tecnicoElectrodomesticosImg,
   },
   {
     nombre: 'Impermeabilizador',
@@ -146,7 +148,7 @@ const servicios = [
   {
     nombre: 'Limpieza de Autos',
     categoria: 'limpieza de autos',
-    icono: 'ri-car-wash-line',
+    icono: 'ri-car-line',
     imagen:
       'https://readdy.ai/api/search-image?query=professional%20car%20detailing%20washing%20cleaning%20shiny%20vehicle%20foam%20soap%20water%20outdoor%20service%20center%20bright%20daylight&width=400&height=260&seq=serv21&orientation=landscape',
   },
@@ -161,14 +163,13 @@ const servicios = [
     nombre: 'Servicios de Catering',
     categoria: 'servicios de catering',
     icono: 'ri-restaurant-2-line',
-    imagen: 'images/serviciosdecatering.png',
+    imagen: serviciosDeCateringImg,
   },
   {
     nombre: 'Servicio Técnico Informático',
     categoria: 'Servicio Técnico Informático',
     icono: 'ri-computer-line',
-    imagen:
-      'https://readdy.ai/api/search-image?query=computer%20technician%20repairing%20laptop%20desktop%20computer%20tools%20professional%20technical%20support%20workshop%20clean%20modern%20lighting&width=400&height=260&seq=serv24&orientation=landscape',
+    imagen: servicioTecnicoInformaticoImg,
   },
 ];
 

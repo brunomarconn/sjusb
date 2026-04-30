@@ -7,7 +7,7 @@ export const CATEGORIAS_SERVICIOS = [
   'pintor',
   'gasista',
   'plomero',
-  'forrajería',
+  'modista',
   'peluquería canina',
   'Servicio Técnico de Electrodomésticos',
   'impermeabilizador hogar',
