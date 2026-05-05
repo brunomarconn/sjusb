@@ -320,15 +320,14 @@ export default function AdminPage() {
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!ADMIN_SECRET) {
-      setAutenticado(true);
-      sessionStorage.setItem('mservicios_admin_ok', '1');
+      setErrorAuth('Error de configuración del servidor. Contactá al administrador.');
       return;
     }
     if (passwordInput === ADMIN_SECRET) {
       setAutenticado(true);
       sessionStorage.setItem('mservicios_admin_ok', '1');
     } else {
-      setErrorAuth('Contrasena incorrecta');
+      setErrorAuth('Contraseña incorrecta.');
     }
   }
 
