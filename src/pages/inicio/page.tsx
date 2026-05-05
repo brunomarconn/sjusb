@@ -5,6 +5,7 @@ import serviciosDeCateringImg from '../../../images/serviciosdecatering.png';
 import servicioTecnicoInformaticoImg from '../../../images/serviciotecnicoinformatico.png';
 import tecnicoElectrodomesticosImg from '../../../images/tecnicoelectrodomesticos.jpeg';
 import modistaImg from '../../../images/modista.jpeg';
+import herreriaImg from '../../../images/herreria.png';
 
 const servicios = [
   {
@@ -107,8 +108,7 @@ const servicios = [
     nombre: 'Herrería',
     categoria: 'herrería',
     icono: 'ri-hammer-line',
-    imagen:
-      'https://readdy.ai/api/search-image?query=blacksmith%20welder%20metalworker%20iron%20workshop%20professional%20tools%20sparks%20dark%20background&width=400&height=260&seq=serv15&orientation=landscape',
+    imagen: herreriaImg,
   },
   {
     nombre: 'Limpieza Tapizados',

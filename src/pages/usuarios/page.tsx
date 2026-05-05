@@ -899,22 +899,25 @@ export default function Usuarios() {
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
-            {/* Card */}
+            {/* Card — max-h con flex-col; el X es absoluto y siempre visible */}
             <div
-              className="relative bg-[#16213e] border border-[#e2b040]/15 rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl"
+              className="relative bg-[#16213e] border border-[#e2b040]/15 rounded-3xl overflow-hidden w-full max-w-md max-h-[calc(100vh-2rem)] flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              {/* Botón X amarillo */}
+              {/* Botón X amarillo — fuera del área scrolleable */}
               <button
                 onClick={() => setPrestadorModal(null)}
-                className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center bg-[#e2b040] rounded-full text-[#1a1a2e] hover:bg-[#f0d080] transition-colors cursor-pointer shadow-lg"
+                className="absolute top-3 right-3 z-30 w-9 h-9 flex items-center justify-center bg-[#e2b040] rounded-full text-[#1a1a2e] hover:bg-[#f0d080] transition-colors cursor-pointer shadow-lg"
                 aria-label="Cerrar"
               >
                 <i className="ri-close-line text-xl font-bold" />
               </button>
 
+              {/* Área scrolleable: carrusel + contenido */}
+              <div className="overflow-y-auto flex-1 min-h-0">
+
               {/* Carrusel modal */}
-              <div className="w-full h-56 sm:h-72 overflow-hidden relative shrink-0">
+              <div className="w-full h-56 sm:h-72 overflow-hidden rounded-t-3xl relative shrink-0">
                 {mitem.video ? (
                   <video key={mitem.url} src={mitem.url} autoPlay muted loop playsInline className="w-full h-full object-cover object-center" />
                 ) : (
@@ -1009,6 +1012,7 @@ export default function Usuarios() {
                   </button>
                 )}
               </div>
+              </div>{/* fin área scrolleable */}
             </div>
           </div>
         );
