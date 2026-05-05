@@ -13,7 +13,7 @@ export const CATEGORIAS_SERVICIOS = [
   'impermeabilizador hogar',
   'alquiler vajilla',
   'pastelería',
-  'cambio de baterías',
+  'herrería',
   'limpieza de tapizados',
   'personal trainer',
   'adiestrador de perros',

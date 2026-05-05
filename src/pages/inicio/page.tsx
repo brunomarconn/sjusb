@@ -104,11 +104,11 @@ const servicios = [
       'https://readdy.ai/api/search-image?query=professional%20pastry%20chef%20decorating%20beautiful%20cake%20bakery%20kitchen%20warm%20light%20elegant%20desserts&width=400&height=260&seq=serv14&orientation=landscape',
   },
   {
-    nombre: 'Cambio de Baterías',
-    categoria: 'cambio de baterías',
-    icono: 'ri-battery-charge-line',
+    nombre: 'Herrería',
+    categoria: 'herrería',
+    icono: 'ri-hammer-line',
     imagen:
-      'https://readdy.ai/api/search-image?query=mechanic%20replacing%20car%20battery%20automotive%20workshop%20tools%20professional%20work%20engine%20close%20up&width=400&height=260&seq=serv15&orientation=landscape',
+      'https://readdy.ai/api/search-image?query=blacksmith%20welder%20metalworker%20iron%20workshop%20professional%20tools%20sparks%20dark%20background&width=400&height=260&seq=serv15&orientation=landscape',
   },
   {
     nombre: 'Limpieza Tapizados',

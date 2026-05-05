@@ -27,9 +27,14 @@ interface Prestador {
   categoria: string;
   zona?: string;
   foto_url: string;
+  galeria_urls?: string[] | null;
   descripcion: string;
   created_at: string;
   valoraciones?: Valoracion[];
+}
+
+function esVideo(url: string): boolean {
+  return /\.(mp4|webm|mov|ogg)($|\?)/i.test(url) || url.includes('/video/');
 }
 
 const categorias = CATEGORIAS_FILTRO_USUARIOS;
@@ -165,6 +170,7 @@ export default function Usuarios() {
   const [mostrarValoraciones, setMostrarValoraciones] = useState<string | null>(null);
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
   const [categoriasExtra, setCategoriasExtra] = useState<string[]>([]);
+  const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
 
   const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
@@ -202,7 +208,7 @@ export default function Usuarios() {
     setLoading(true);
     setError('');
     try {
-      const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, descripcion, created_at,
+      const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
 
       let result = await supabase
@@ -625,25 +631,89 @@ export default function Usuarios() {
                     key={prestador.id}
                     className="bg-[#16213e]/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col min-w-0"
                   >
-                    {/* Foto */}
-                    <div className="w-full h-36 sm:h-60 overflow-hidden relative">
-                      <img
-                        src={prestador.foto_url}
-                        alt={`${prestador.nombre} ${prestador.apellido}`}
-                        className="w-full h-full object-cover object-center"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            'https://readdy.ai/api/search-image?query=professional+service+worker+portrait+neutral+background&width=400&height=300&seq=fallback01&orientation=portrait';
-                        }}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent"></div>
-                      {/* Verificado */}
-                      <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-[10px] sm:text-xs font-semibold text-green-400 border border-green-400/30">
-                        <i className="ri-shield-check-fill text-xs"></i>
-                        Verificado
-                      </div>
-                    </div>
+                    {/* Carrusel de fotos/videos */}
+                    {(() => {
+                      const media = [
+                        { url: prestador.foto_url, video: false },
+                        ...(prestador.galeria_urls || [])
+                          .filter(Boolean)
+                          .map(url => ({ url, video: esVideo(url) })),
+                      ];
+                      const idx = Math.min(carouselIndices[prestador.id] ?? 0, media.length - 1);
+                      const item = media[idx];
+                      const prev = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setCarouselIndices(p => ({ ...p, [prestador.id]: (idx - 1 + media.length) % media.length }));
+                      };
+                      const next = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setCarouselIndices(p => ({ ...p, [prestador.id]: (idx + 1) % media.length }));
+                      };
+                      return (
+                        <div className="w-full h-36 sm:h-60 overflow-hidden relative group/car">
+                          {/* Media actual */}
+                          {item.video ? (
+                            <video
+                              key={item.url}
+                              src={item.url}
+                              autoPlay muted loop playsInline
+                              className="w-full h-full object-cover object-center"
+                            />
+                          ) : (
+                            <img
+                              key={item.url}
+                              src={item.url}
+                              alt={`${prestador.nombre} ${prestador.apellido}`}
+                              className="w-full h-full object-cover object-center"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://readdy.ai/api/search-image?query=professional+service+worker+portrait+neutral+background&width=400&height=300&seq=fallback01&orientation=portrait';
+                              }}
+                            />
+                          )}
+
+                          {/* Gradiente inferior */}
+                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent pointer-events-none" />
+
+                          {/* Badge verificado */}
+                          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-[10px] sm:text-xs font-semibold text-green-400 border border-green-400/30">
+                            <i className="ri-shield-check-fill text-xs"></i>
+                            Verificado
+                          </div>
+
+                          {/* Flechas — siempre visibles en mobile, aparecen con hover en desktop */}
+                          {media.length > 1 && (
+                            <>
+                              <button
+                                onClick={prev}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-black/50 border border-white/25 text-white cursor-pointer"
+                                aria-label="Anterior"
+                              >
+                                <i className="ri-arrow-left-s-line text-base sm:text-lg leading-none" />
+                              </button>
+                              <button
+                                onClick={next}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-black/50 border border-white/25 text-white cursor-pointer"
+                                aria-label="Siguiente"
+                              >
+                                <i className="ri-arrow-right-s-line text-base sm:text-lg leading-none" />
+                              </button>
+
+                              {/* Puntos indicadores */}
+                              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 pointer-events-none">
+                                {media.map((_, i) => (
+                                  <span
+                                    key={i}
+                                    className={`block h-1.5 rounded-full transition-all ${i === idx ? 'w-3 bg-white' : 'w-1.5 bg-white/45'}`}
+                                  />
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
                       {/* Nombre */}
