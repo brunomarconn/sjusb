@@ -171,6 +171,13 @@ export default function Usuarios() {
   const [puntosUsuario, setPuntosUsuario] = useState<number | null>(null);
   const [categoriasExtra, setCategoriasExtra] = useState<string[]>([]);
   const [carouselIndices, setCarouselIndices] = useState<Record<string, number>>({});
+  const [prestadorModal, setPrestadorModal] = useState<Prestador | null>(null);
+  const [modalCarouselIdx, setModalCarouselIdx] = useState(0);
+
+  useEffect(() => {
+    document.body.style.overflow = prestadorModal ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [prestadorModal]);
 
   const clienteDni = localStorage.getItem('mservicios_cliente_dni');
 
@@ -629,7 +636,8 @@ export default function Usuarios() {
                 return (
                   <div
                     key={prestador.id}
-                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col min-w-0"
+                    className="bg-[#16213e]/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-[#e2b040]/20 overflow-hidden hover:border-[#e2b040]/50 active:border-[#e2b040]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#e2b040]/10 flex flex-col min-w-0 cursor-pointer"
+                    onClick={() => { setPrestadorModal(prestador); setModalCarouselIdx(0); }}
                   >
                     {/* Carrusel de fotos/videos */}
                     {(() => {
@@ -650,7 +658,7 @@ export default function Usuarios() {
                         setCarouselIndices(p => ({ ...p, [prestador.id]: (idx + 1) % media.length }));
                       };
                       return (
-                        <div className="w-full h-36 sm:h-60 overflow-hidden relative group/car">
+                        <div className="w-full h-44 sm:h-60 overflow-hidden relative group/car">
                           {/* Media actual */}
                           {item.video ? (
                             <video
@@ -744,7 +752,7 @@ export default function Usuarios() {
                       </p>
                       {prestador.descripcion && prestador.descripcion.length > 90 && (
                         <button
-                          onClick={() => toggleDesc(prestador.id)}
+                          onClick={(e) => { e.stopPropagation(); toggleDesc(prestador.id); }}
                           className="mt-1 mb-2 text-[#e2b040]/60 hover:text-[#e2b040] text-xs transition-colors cursor-pointer self-start py-1.5 pr-2"
                           aria-label={descExpandida ? 'Ver menos' : 'Ver más descripción'}
                         >
@@ -757,7 +765,7 @@ export default function Usuarios() {
 
                       {/* CTA principal — WhatsApp */}
                       <button
-                        onClick={() => navigate(`/reservar/${prestador.id}`)}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/reservar/${prestador.id}`); }}
                         className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-3 sm:py-4 bg-[#25D366] hover:bg-[#1da851] active:bg-[#178f42] text-white rounded-xl font-bold text-xs sm:text-base transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20 min-h-[46px] sm:min-h-[52px]"
                         aria-label={`Contactar a ${prestador.nombre} por WhatsApp`}
                       >
@@ -768,7 +776,7 @@ export default function Usuarios() {
 
                       {clienteDni && (
                         <button
-                          onClick={() => navigate(`/chat?prestador=${prestador.id}`)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/chat?prestador=${prestador.id}`); }}
                           className="w-full flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 border border-[#e2b040]/45 bg-[#e2b040]/10 text-[#f0d080] hover:bg-[#e2b040]/15 rounded-lg font-semibold text-[11px] sm:text-sm transition-colors cursor-pointer mb-2 min-h-[40px]"
                           aria-label={`Enviar mensaje a ${prestador.nombre} por la página`}
                         >
@@ -782,7 +790,7 @@ export default function Usuarios() {
                       <div className="flex flex-wrap items-center justify-between gap-x-2 pt-0.5">
                         {vals.length > 0 ? (
                           <button
-                            onClick={() => setMostrarValoraciones(expandido ? null : prestador.id)}
+                            onClick={(e) => { e.stopPropagation(); setMostrarValoraciones(expandido ? null : prestador.id); }}
                             className="text-gray-500 hover:text-[#e2b040] text-xs transition-colors cursor-pointer py-2 pr-2"
                           >
                             {expandido ? 'Ocultar opiniones' : `Ver ${vals.length} opinión${vals.length !== 1 ? 'es' : ''}`}
@@ -793,7 +801,7 @@ export default function Usuarios() {
                         )}
                         {puedeValorar && (
                           <button
-                            onClick={() => handleValorar(prestador)}
+                            onClick={(e) => { e.stopPropagation(); handleValorar(prestador); }}
                             className="text-[#e2b040]/70 hover:text-[#e2b040] text-xs transition-colors cursor-pointer flex items-center gap-1 ml-auto py-2 pl-2"
                           >
                             <i className="ri-star-line"></i>Valorar
@@ -870,6 +878,141 @@ export default function Usuarios() {
           </>
         )}
       </div>
+
+      {/* ── Modal perfil prestador ── */}
+      {prestadorModal && (() => {
+        const p = prestadorModal;
+        const vals = p.valoraciones || [];
+        const promedio = calcularPromedio(vals);
+        const media = [
+          { url: p.foto_url, video: false },
+          ...(p.galeria_urls || []).filter(Boolean).map(url => ({ url, video: esVideo(url) })),
+        ];
+        const midx = Math.min(modalCarouselIdx, media.length - 1);
+        const mitem = media[midx];
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setPrestadorModal(null)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+
+            {/* Card */}
+            <div
+              className="relative bg-[#16213e] border border-[#e2b040]/15 rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Botón X amarillo */}
+              <button
+                onClick={() => setPrestadorModal(null)}
+                className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center bg-[#e2b040] rounded-full text-[#1a1a2e] hover:bg-[#f0d080] transition-colors cursor-pointer shadow-lg"
+                aria-label="Cerrar"
+              >
+                <i className="ri-close-line text-xl font-bold" />
+              </button>
+
+              {/* Carrusel modal */}
+              <div className="w-full h-56 sm:h-72 overflow-hidden relative shrink-0">
+                {mitem.video ? (
+                  <video key={mitem.url} src={mitem.url} autoPlay muted loop playsInline className="w-full h-full object-cover object-center" />
+                ) : (
+                  <img key={mitem.url} src={mitem.url} alt={`${p.nombre} ${p.apellido}`} className="w-full h-full object-cover object-center" />
+                )}
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#16213e] to-transparent pointer-events-none" />
+                <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold text-green-400 border border-green-400/30">
+                  <i className="ri-shield-check-fill text-xs" />
+                  Verificado
+                </div>
+                {media.length > 1 && (
+                  <>
+                    <button onClick={() => setModalCarouselIdx((midx - 1 + media.length) % media.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 border border-white/25 text-white cursor-pointer" aria-label="Anterior">
+                      <i className="ri-arrow-left-s-line text-lg" />
+                    </button>
+                    <button onClick={() => setModalCarouselIdx((midx + 1) % media.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 border border-white/25 text-white cursor-pointer" aria-label="Siguiente">
+                      <i className="ri-arrow-right-s-line text-lg" />
+                    </button>
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                      {media.map((_, i) => (
+                        <span key={i} className={`block h-1.5 rounded-full transition-all ${i === midx ? 'w-4 bg-white' : 'w-1.5 bg-white/45'}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Contenido */}
+              <div className="p-5 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 leading-snug">{p.nombre} {p.apellido}</h2>
+                <p className="text-sm mb-3">
+                  <span className="text-[#f0d080] font-semibold capitalize">{p.categoria}</span>
+                  {p.zona && <span className="text-gray-500"> · {p.zona}</span>}
+                </p>
+
+                {vals.length > 0 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex">{renderEstrellas(promedio)}</div>
+                    <span className="text-[#e2b040] font-bold">{promedio.toFixed(1)}</span>
+                    <span className="text-gray-500 text-sm">· {vals.length} valoración{vals.length !== 1 ? 'es' : ''}</span>
+                  </div>
+                )}
+
+                {p.descripcion && (
+                  <p className="text-gray-300 text-sm leading-relaxed mb-5 whitespace-pre-line">{p.descripcion}</p>
+                )}
+
+                {/* WhatsApp */}
+                <button
+                  onClick={() => navigate(`/reservar/${p.id}`)}
+                  className="w-full flex items-center justify-center gap-2 py-4 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold text-base transition-colors cursor-pointer mb-3 shadow-md shadow-[#25D366]/20"
+                >
+                  <i className="ri-whatsapp-line text-xl" />
+                  Contactar por WhatsApp
+                </button>
+
+                {clienteDni && (
+                  <button
+                    onClick={() => { setPrestadorModal(null); navigate(`/chat?prestador=${p.id}`); }}
+                    className="w-full flex items-center justify-center gap-2 py-3 border border-[#e2b040]/45 bg-[#e2b040]/10 text-[#f0d080] hover:bg-[#e2b040]/15 rounded-xl font-semibold text-sm transition-colors cursor-pointer mb-4"
+                  >
+                    <i className="ri-message-3-line" />
+                    Enviar mensaje por la página
+                  </button>
+                )}
+
+                {/* Valoraciones */}
+                {vals.length > 0 && (
+                  <div className="border-t border-[#e2b040]/10 pt-4">
+                    <h3 className="text-white font-bold text-sm mb-3">Opiniones ({vals.length})</h3>
+                    <div className="space-y-3">
+                      {vals.map(v => (
+                        <div key={v.id} className="bg-[#1a1a2e]/60 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-white text-sm font-semibold">{v.nombre_cliente}</span>
+                            <div className="flex">{renderEstrellas(v.puntuacion, true)}</div>
+                          </div>
+                          <p className="text-gray-400 text-xs leading-relaxed whitespace-pre-line break-words">{v.comentario}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {clienteDni && yaReservo(p.id) && (
+                  <button
+                    onClick={() => { setPrestadorModal(null); handleValorar(p); }}
+                    className="mt-4 w-full py-2.5 border border-[#e2b040]/30 text-[#e2b040] rounded-xl text-sm font-semibold hover:bg-[#e2b040]/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <i className="ri-star-line" />
+                    Dejar valoración
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Modal valoración ── */}
       {mostrarModalValoracion && prestadorSeleccionado && (
