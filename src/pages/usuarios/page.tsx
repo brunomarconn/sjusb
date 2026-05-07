@@ -834,16 +834,37 @@ export default function Usuarios() {
 
             {/* Sin resultados */}
             {prestadoresFiltrados.length === 0 && (
-              <div className="text-center py-14 px-4">
-                <i className="ri-search-line text-5xl text-gray-600 mb-4 block"></i>
-                <p className="text-gray-300 text-lg mb-2 font-semibold">No encontramos prestadores</p>
-                <p className="text-gray-500 text-sm mb-6">Próximamente más opciones en tu zona. Podés intentar con otros términos.</p>
+              <div className="text-center py-12 px-4">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#e2b040]/10 border border-[#e2b040]/20 flex items-center justify-center">
+                  <i className="ri-search-line text-3xl text-[#e2b040]/60"></i>
+                </div>
+                <p className="text-white text-lg font-bold mb-2">
+                  {busqueda ? `Sin resultados para "${busqueda}"` : 'No hay prestadores disponibles'}
+                </p>
+                <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
+                  {zonaInput
+                    ? `Todavía no tenemos prestadores en "${zonaInput}". Probá con otra zona o sin filtro de zona.`
+                    : 'Podés intentar con otros términos o explorar las categorías populares.'}
+                </p>
+
+                <div className="flex flex-wrap justify-center gap-2 mb-6">
+                  {(['electricista','plomero','pintor','gasista','jardinero','albañil'] as const).map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => { setInputValue(''); setBusqueda(''); setCategoriaFiltro(cat); setZonaInput(''); }}
+                      className="px-4 py-2 rounded-full border border-[#e2b040]/30 text-[#e2b040]/80 text-xs hover:bg-[#e2b040]/10 hover:border-[#e2b040]/60 transition-colors cursor-pointer capitalize"
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
                 {(busqueda || categoriaFiltro !== 'todas' || zonaInput) && (
                   <button
                     onClick={() => { setInputValue(''); setBusqueda(''); setCategoriaFiltro('todas'); setZonaInput(''); }}
-                    className="min-h-[48px] px-6 py-3 border border-[#e2b040]/40 text-[#e2b040] rounded-xl hover:bg-[#e2b040]/10 transition-colors cursor-pointer text-sm whitespace-nowrap"
+                    className="min-h-[44px] px-6 py-2.5 border border-white/20 text-gray-400 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-sm"
                   >
-                    <i className="ri-close-circle-line mr-2"></i>Limpiar filtros
+                    <i className="ri-close-circle-line mr-2"></i>Limpiar todos los filtros
                   </button>
                 )}
               </div>

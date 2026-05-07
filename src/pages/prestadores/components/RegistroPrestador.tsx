@@ -458,6 +458,13 @@ export default function RegistroPrestador({ onRegistroExitoso, onVolverLogin }: 
             )}
           </div>
 
+          <p className="text-xs text-gray-500 text-center leading-relaxed">
+            Al registrarte aceptás nuestros{' '}
+            <button type="button" onClick={() => navigate('/terminos')} className="text-[#e2b040]/80 hover:text-[#e2b040] underline cursor-pointer">Términos y Condiciones</button>
+            {' '}y la{' '}
+            <button type="button" onClick={() => navigate('/privacidad')} className="text-[#e2b040]/80 hover:text-[#e2b040] underline cursor-pointer">Política de Privacidad</button>.
+          </p>
+
           <button
             type="submit" disabled={loading}
             className="w-full bg-gradient-to-r from-[#e2b040] to-[#f0d080] text-[#1a1a2e] py-3 rounded-lg font-bold hover:shadow-lg hover:shadow-[#e2b040]/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"

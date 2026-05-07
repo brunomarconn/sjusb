@@ -18,6 +18,9 @@ const Chat = lazy(() => import('../pages/chat/page'));
 const Reservar = lazy(() => import('../pages/reservar/page'));
 /* The NotFound component lives directly in the pages folder */
 const NotFound = lazy(() => import('../pages/NotFound'));
+const FAQ = lazy(() => import('../pages/faq/page'));
+const Privacidad = lazy(() => import('../pages/privacidad/page'));
+const Terminos = lazy(() => import('../pages/terminos/page'));
 
 const routes: RouteObject[] = [
   {
@@ -60,6 +63,18 @@ const routes: RouteObject[] = [
   {
     path: '/reservar/:prestadorId',
     element: <Reservar />,
+  },
+  {
+    path: '/faq',
+    element: <FAQ />,
+  },
+  {
+    path: '/privacidad',
+    element: <Privacidad />,
+  },
+  {
+    path: '/terminos',
+    element: <Terminos />,
   },
   {
     path: '*',

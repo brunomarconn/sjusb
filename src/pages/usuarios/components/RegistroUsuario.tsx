@@ -199,6 +199,13 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
               />
             </div>
 
+            <p className="text-xs text-gray-500 text-center leading-relaxed">
+              Al crear tu cuenta aceptás nuestros{' '}
+              <button type="button" onClick={() => navigate('/terminos')} className="text-[#e2b040]/80 hover:text-[#e2b040] underline cursor-pointer">Términos y Condiciones</button>
+              {' '}y la{' '}
+              <button type="button" onClick={() => navigate('/privacidad')} className="text-[#e2b040]/80 hover:text-[#e2b040] underline cursor-pointer">Política de Privacidad</button>.
+            </p>
+
             <button
               type="submit"
               disabled={cargando}

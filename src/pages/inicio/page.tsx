@@ -585,14 +585,15 @@ export default function Inicio() {
                 <li><a href="#quienes-somos" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Quiénes somos</a></li>
                 <li><a href="#como-funciona" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Cómo funciona</a></li>
                 <li><a onClick={() => navigate('/prestadores')} className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Para profesionales</a></li>
+                <li><a onClick={() => navigate('/faq')} className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Preguntas frecuentes</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-[#e2b040] font-bold text-xs uppercase tracking-widest mb-4">Legal</h4>
               <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Términos y condiciones</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Política de privacidad</a></li>
+                <li><a onClick={() => navigate('/terminos')} className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Términos y condiciones</a></li>
+                <li><a onClick={() => navigate('/privacidad')} className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Política de privacidad</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-[#e2b040] transition-colors text-sm cursor-pointer">Política de pagos</a></li>
               </ul>
             </div>
