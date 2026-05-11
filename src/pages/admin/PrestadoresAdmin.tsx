@@ -610,6 +610,24 @@ export default function PrestadoresAdmin() {
       } else {
         const password = form.dni.trim();
         await insertPrestador({ ...payload, password });
+
+        // Obtener el id del prestador recién creado
+        const { data: nuevoPrestador } = await supabase
+          .from('prestadores')
+          .select('id')
+          .eq('dni', form.dni.trim())
+          .maybeSingle();
+
+        if (nuevoPrestador?.id) {
+          // Disponibilidad por defecto: lunes a viernes, mañana y tarde
+          const dispDefecto: { prestador_id: string; dia_semana: number; turno: string }[] = [];
+          for (const dia of [1, 2, 3, 4, 5]) {
+            dispDefecto.push({ prestador_id: nuevoPrestador.id, dia_semana: dia, turno: 'mañana' });
+            dispDefecto.push({ prestador_id: nuevoPrestador.id, dia_semana: dia, turno: 'tarde' });
+          }
+          await supabase.from('disponibilidad_prestadores').insert(dispDefecto);
+        }
+
         showToast('Prestador creado correctamente ✓');
       }
 
