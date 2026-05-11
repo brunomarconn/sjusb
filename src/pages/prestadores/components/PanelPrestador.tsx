@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, type Prestador, type Valoracion } from '../../../lib/supabase';
 import { CATEGORIAS_SERVICIOS } from '../../../constants/categorias';
+import { reservasService, comisionesService } from '../../../services/reservasService';
+import type { Reserva, Comision } from '../../../types/reservas';
+import { RESERVA_ESTADO_LABELS, RESERVA_ESTADO_COLORS, COMISION_ESTADO_LABELS, COMISION_ESTADO_COLORS, formatFechaReserva } from '../../../types/reservas';
 
 // ── Tipos disponibilidad ──────────────────────────────────────
 type Turno = 'mañana' | 'tarde';
@@ -64,6 +67,40 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
   const [guardandoDisp, setGuardandoDisp] = useState(false);
   const [dispGuardada, setDispGuardada] = useState(false);
 
+  // ── Reservas ──────────────────────────────────────────────
+  const [misReservas, setMisReservas] = useState<Reserva[]>([]);
+  const [misComisiones, setMisComisiones] = useState<Comision[]>([]);
+  const [cargandoReservas, setCargandoReservas] = useState(false);
+  const [modalCancelacion, setModalCancelacion] = useState<string | null>(null);
+  const [motivoCancelacion, setMotivoCancelacion] = useState('');
+  const [enviandoCancelacion, setEnviandoCancelacion] = useState(false);
+
+  const cargarReservasPrestador = async (prestadorId: string) => {
+    setCargandoReservas(true);
+    try {
+      const [reservasResult, comisionesResult] = await Promise.allSettled([
+        reservasService.listarTodas({ prestador_id: prestadorId }),
+        comisionesService.listarPorPrestador(prestadorId),
+      ]);
+
+      if (reservasResult.status === 'fulfilled') {
+        setMisReservas(reservasResult.value);
+      } else {
+        setMisReservas([]);
+        console.error('Error cargando reservas del prestador:', reservasResult.reason);
+      }
+
+      if (comisionesResult.status === 'fulfilled') {
+        setMisComisiones(comisionesResult.value);
+      } else {
+        setMisComisiones([]);
+        console.warn('No se pudieron cargar comisiones del prestador:', comisionesResult.reason);
+      }
+    } finally {
+      setCargandoReservas(false);
+    }
+  };
+
   const cargarDatos = async () => {
       try {
         // Cargar datos del prestador
@@ -80,6 +117,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
           // Guardar UUID para el sistema de chat
           localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
           cargarDisponibilidad(prestadorInfo.id);
+          cargarReservasPrestador(prestadorInfo.id);
           setFormData({
             nombre: prestadorInfo.nombre,
             apellido: prestadorInfo.apellido,
@@ -144,6 +182,23 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
       const nuevo = existe ? actual.filter(t => t !== turno) : [...actual, turno];
       return { ...prev, [dia]: nuevo };
     });
+  };
+
+  const solicitarCancelacion = async () => {
+    if (!modalCancelacion || !motivoCancelacion.trim()) return;
+    setEnviandoCancelacion(true);
+    try {
+      await reservasService.actualizarEstado(modalCancelacion, 'cancelacion_solicitada_por_prestador', {
+        motivo_cancelacion: motivoCancelacion.trim(),
+      });
+      setModalCancelacion(null);
+      setMotivoCancelacion('');
+      if (prestador) await cargarReservasPrestador(prestador.id);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setEnviandoCancelacion(false);
+    }
   };
 
   const guardarDisponibilidad = async () => {
@@ -868,8 +923,192 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
               )}
             </div>
           </div>
+
+          {/* Mis Reservas */}
+          <div className="mt-8">
+            <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Mis Reservas</h2>
+                  <p className="text-gray-400 text-sm mt-1">Reservas activas y comisiones pendientes</p>
+                </div>
+                {prestador && (
+                  <button
+                    onClick={() => cargarReservasPrestador(prestador.id)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-sm transition-colors cursor-pointer"
+                  >
+                    <i className={`ri-refresh-line ${cargandoReservas ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </button>
+                )}
+              </div>
+
+              {cargandoReservas ? (
+                <div className="flex justify-center py-8">
+                  <i className="ri-loader-4-line animate-spin text-3xl text-[#e2b040]" />
+                </div>
+              ) : (
+                <>
+                  {/* Comisiones pendientes — mostrar primero porque requieren acción */}
+                  {misComisiones.filter(c => c.estado !== 'comision_pagada').length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-orange-300 mb-3 flex items-center gap-2">
+                        <i className="ri-coins-line" />
+                        Comisiones pendientes de pago
+                      </h3>
+                      <div className="space-y-3">
+                        {misComisiones.filter(c => c.estado !== 'comision_pagada').map(c => (
+                          <div key={c.id} className="bg-[#16213e] border border-orange-500/30 rounded-xl p-4">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="text-white font-semibold text-sm">Comisión por trabajo concretado</p>
+                                {c.reservas && (
+                                  <p className="text-gray-400 text-xs mt-0.5">
+                                    {formatFechaReserva(c.reservas.dia)} · {c.reservas.turno === 'mañana' ? 'Mañana' : 'Tarde'}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-orange-300 font-bold text-base">$3.000</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${COMISION_ESTADO_COLORS[c.estado]}`}>
+                                  {COMISION_ESTADO_LABELS[c.estado]}
+                                </span>
+                              </div>
+                            </div>
+                            {c.mp_init_point && (
+                              <div className="mt-3 pt-3 border-t border-white/5">
+                                <a
+                                  href={c.mp_init_point}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e2b040] text-[#1a1a2e] rounded-xl text-sm font-bold hover:bg-[#f0d080] transition-colors"
+                                >
+                                  <i className="ri-bank-card-line" />
+                                  Pagar $3.000 ahora
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reservas activas */}
+                  {misReservas.filter(r => r.estado === 'reserva_activa').length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
+                        <i className="ri-calendar-line" />
+                        Reservas activas
+                      </h3>
+                      <div className="space-y-3">
+                        {misReservas.filter(r => r.estado === 'reserva_activa').map(r => (
+                          <div key={r.id} className="bg-[#16213e] border border-[#e2b040]/15 rounded-xl p-4">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="text-white font-semibold text-sm">{r.nombre} {r.apellido}</p>
+                                <p className="text-gray-400 text-xs mt-0.5">
+                                  <i className="ri-phone-line mr-1" />{r.telefono}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[#e2b040] text-sm font-semibold">{formatFechaReserva(r.dia)}</p>
+                                <p className="text-gray-400 text-xs">{r.turno === 'mañana' ? '🌅 Mañana' : '🌆 Tarde'}</p>
+                              </div>
+                            </div>
+                            {(r.zona || r.descripcion_trabajo) && (
+                              <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+                                {r.zona && <p><i className="ri-map-pin-line mr-1 text-[#e2b040]" />{r.zona}</p>}
+                                {r.descripcion_trabajo && <p><i className="ri-tools-line mr-1 text-[#e2b040]" />{r.descripcion_trabajo}</p>}
+                              </div>
+                            )}
+                            <div className="mt-3 pt-3 border-t border-white/5">
+                              <button
+                                onClick={() => { setModalCancelacion(r.id); setMotivoCancelacion(''); }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs transition-colors cursor-pointer"
+                              >
+                                <i className="ri-close-circle-line" />
+                                Solicitar cancelación
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Historial */}
+                  {misReservas.filter(r => r.estado === 'trabajo_concretado').length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-green-300 mb-3 flex items-center gap-2">
+                        <i className="ri-checkbox-circle-line" />
+                        Trabajos concretados
+                      </h3>
+                      <div className="space-y-2">
+                        {misReservas.filter(r => r.estado === 'trabajo_concretado').slice(0, 5).map(r => (
+                          <div key={r.id} className="bg-[#16213e] border border-green-500/15 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-white text-sm font-medium">{r.nombre} {r.apellido}</p>
+                              <p className="text-gray-500 text-xs">{formatFechaReserva(r.dia)}</p>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-300">
+                              {RESERVA_ESTADO_LABELS[r.estado]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {misReservas.length === 0 && misComisiones.length === 0 && (
+                    <div className="text-center py-10">
+                      <i className="ri-calendar-line text-5xl text-gray-700 mb-3 block" />
+                      <p className="text-gray-500">Todavía no tenés reservas</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Modal solicitud de cancelación */}
+      {modalCancelacion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalCancelacion(null)} />
+          <div className="relative bg-[#16213e] border border-[#e2b040]/20 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-white font-bold text-lg mb-2">Solicitar cancelación</h3>
+            <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+              El administrador notificará al cliente. Si el cliente confirma, no se cobra comisión.
+              Si rechaza, la reserva quedará como incidente para revisión.
+            </p>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Motivo *</label>
+            <textarea
+              value={motivoCancelacion}
+              onChange={e => setMotivoCancelacion(e.target.value)}
+              rows={3}
+              placeholder="Explicá brevemente por qué necesitás cancelar..."
+              className="w-full px-3 py-2.5 bg-[#1a1a2e] border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm resize-none transition-colors"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={solicitarCancelacion}
+                disabled={!motivoCancelacion.trim() || enviandoCancelacion}
+                className="flex-1 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {enviandoCancelacion ? 'Enviando...' : 'Solicitar cancelación'}
+              </button>
+              <button
+                onClick={() => setModalCancelacion(null)}
+                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

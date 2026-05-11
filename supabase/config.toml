@@ -371,6 +371,12 @@ deno_version = 2
 [functions.eliminar-prestador]
 verify_jwt = false
 
+[functions.procesar-comision]
+verify_jwt = false
+
+[functions.mp-webhook-comision]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

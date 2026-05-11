@@ -4,10 +4,11 @@ import { chatService } from '../../services/chatService';
 import type { Conversacion, ConversacionResumen, Mensaje } from '../../types/chat';
 import { formatFechaCompleta, formatHoraChat } from '../../types/chat';
 import PrestadoresAdmin from './PrestadoresAdmin';
+import ReservasAdmin from './ReservasAdmin';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
-type AdminView = 'home' | 'mensajes' | 'prestadores';
+type AdminView = 'home' | 'mensajes' | 'prestadores' | 'reservas';
 
 function LoginScreen({
   passwordInput,
@@ -64,11 +65,20 @@ function LoginScreen({
 function AdminHome({
   onEntrarMensajes,
   onEntrarPrestadores,
+  onEntrarReservas,
 }: {
   onEntrarMensajes: () => void;
   onEntrarPrestadores: () => void;
+  onEntrarReservas: () => void;
 }) {
   const modulos = [
+    {
+      icono: 'ri-calendar-check-line',
+      titulo: 'Reservas y Comisiones',
+      desc: 'Ver reservas activas, procesar trabajos concretados, gestionar comisiones y links de MercadoPago.',
+      cta: 'Gestionar reservas',
+      onClick: onEntrarReservas,
+    },
     {
       icono: 'ri-user-star-line',
       titulo: 'Prestadores',
@@ -413,6 +423,7 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500">
                 {vista === 'home' ? 'Elegí un módulo' :
                  vista === 'mensajes' ? 'Visualizador de mensajes' :
+                 vista === 'reservas' ? 'Reservas y comisiones' :
                  'Gestión de prestadores'}
               </p>
             </div>
@@ -447,8 +458,11 @@ export default function AdminPage() {
           <AdminHome
             onEntrarMensajes={() => setVista('mensajes')}
             onEntrarPrestadores={() => setVista('prestadores')}
+            onEntrarReservas={() => setVista('reservas')}
           />
         )}
+
+        {vista === 'reservas' && <ReservasAdmin />}
 
         {vista === 'prestadores' && <PrestadoresAdmin />}
 

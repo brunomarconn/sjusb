@@ -17,7 +17,9 @@ export interface Prestador {
   dni: string;
   email: string;
   password: string;
+  telefono?: string | null;
   categoria: string;
+  zona?: string | null;
   foto_url: string;
   descripcion: string;
   galeria_urls?: string[] | null;

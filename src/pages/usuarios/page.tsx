@@ -218,24 +218,12 @@ export default function Usuarios() {
       const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
 
-      let result = await supabase
+      const result = await supabase
         .from('prestadores')
         .select(selectBase)
-        .or('enabled.is.null,enabled.eq.true')
         .order('created_at', { ascending: false });
 
       // Si falla por la columna enabled (aún no migrada), reintentamos sin el filtro
-      if (result.error) {
-        const msg = result.error.message?.toLowerCase() ?? '';
-        const esErrorColumna = msg.includes('enabled') || msg.includes('schema cache') || msg.includes('could not find');
-        if (esErrorColumna) {
-          result = await supabase
-            .from('prestadores')
-            .select(selectBase)
-            .order('created_at', { ascending: false });
-        }
-      }
-
       if (result.error) throw result.error;
 
       if (result.data && result.data.length > 0) {

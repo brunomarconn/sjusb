@@ -46,6 +46,13 @@ function toISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function isMissingColumnError(error: unknown, columns: string[]): boolean {
+  if (!error || typeof error !== 'object' || !('message' in error)) return false;
+  const message = String(error.message).toLowerCase();
+  return columns.some((column) => message.includes(column.toLowerCase()))
+    && (message.includes('schema cache') || message.includes('could not find') || message.includes('does not exist'));
+}
+
 // Genera los próximos N días a partir de hoy
 function proximosDias(n: number): Date[] {
   const dias: Date[] = [];
@@ -78,6 +85,8 @@ export default function ReservarPage() {
   const [nombre, setNombre]     = useState('');
   const [apellido, setApellido] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [zona, setZona] = useState('');
+  const [descripcionTrabajo, setDescripcionTrabajo] = useState('');
 
   const [enviando, setEnviando] = useState(false);
   const [reservado, setReservado] = useState(false);
@@ -173,27 +182,52 @@ export default function ReservarPage() {
       const turnoStr = turnoSeleccionado === 'mañana' ? 'Mañana' : 'Tarde';
 
       // ── 1. Construir y abrir WhatsApp PRIMERO (no depende de nada externo) ──
-      const mensaje = `Hola! Me comunico desde *ServiciosYa* para hacer una reserva 📅
+      const mensaje = `Hola! 👋 ¿Cómo estás?
 
-👤 *Nombre:* ${nombre.trim()} ${apellido.trim()}
-📅 *Día:* ${diaStr}
-⏰ *Turno:* ${turnoStr}
-🔧 *Servicio:* ${prestador.categoria}`;
+Te contacto desde *ServiciosYa* porque me interesa contratar tu servicio de *${prestador.categoria}* 🔧
 
-      const numeroPrestador = prestador.telefono?.replace(/\D/g, '');
-      if (numeroPrestador) {
-        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
-      }
+Quería consultar si tenés disponibilidad para el día *${diaStr}* en el horario de *${turnoStr}*.
+
+👤 *${nombre.trim()} ${apellido.trim()}*
+
+¡Espero tu respuesta, gracias!`;
 
       // ── 2. Guardar reserva directamente en Supabase ──
-      await supabase.from('reservas').insert({
+      const reservaPayload = {
         prestador_id: prestador.id,
         nombre:   nombre.trim(),
         apellido: apellido.trim(),
         telefono: telefono.replace(/\D/g, ''),
         dia:   toISODate(diaSeleccionado),
         turno: turnoSeleccionado,
-      });
+        estado: 'reserva_activa',
+        zona: zona.trim() || null,
+        descripcion_trabajo: descripcionTrabajo.trim() || null,
+      };
+
+      const insertResult = await supabase.from('reservas').insert(reservaPayload);
+      if (insertResult.error) {
+        if (isMissingColumnError(insertResult.error, ['estado', 'zona', 'descripcion_trabajo'])) {
+          const fallbackResult = await supabase
+            .from('reservas')
+            .insert({
+              prestador_id: reservaPayload.prestador_id,
+              nombre: reservaPayload.nombre,
+              apellido: reservaPayload.apellido,
+              telefono: reservaPayload.telefono,
+              dia: reservaPayload.dia,
+              turno: reservaPayload.turno,
+            });
+          if (fallbackResult.error) throw fallbackResult.error;
+        } else {
+          throw insertResult.error;
+        }
+      }
+
+      const numeroPrestador = prestador.telefono?.replace(/\D/g, '');
+      if (numeroPrestador) {
+        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      }
 
       // ── 3. Marcar como reservado (habilita valoración) ──
       marcarReservado(prestador.id);
@@ -217,6 +251,7 @@ export default function ReservarPage() {
       setReservado(true);
     } catch (err) {
       console.error('Error al confirmar reserva:', err);
+      setError('No se pudo guardar la reserva. Probá nuevamente en unos minutos.');
     } finally {
       setEnviando(false);
     }
@@ -436,7 +471,6 @@ export default function ReservarPage() {
                 />
               </div>
             </div>
-
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Teléfono / WhatsApp *</label>
               <input
@@ -457,6 +491,28 @@ export default function ReservarPage() {
               ) : (
                 <p className="text-gray-600 text-xs mt-1">Solo números, mínimo 10 dígitos</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Zona / Dirección</label>
+              <input
+                type="text"
+                value={zona}
+                onChange={e => setZona(e.target.value)}
+                placeholder="Ej: Villa Allende, Barrio Las Flores"
+                className="w-full px-3 py-2.5 bg-[#1a1a2e] border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Descripción del trabajo</label>
+              <textarea
+                value={descripcionTrabajo}
+                onChange={e => setDescripcionTrabajo(e.target.value)}
+                placeholder="Ej: Reparar canilla del baño, pintar habitación 4x4m..."
+                rows={2}
+                className="w-full px-3 py-2.5 bg-[#1a1a2e] border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm transition-colors resize-none"
+              />
             </div>
 
             {/* Resumen */}
