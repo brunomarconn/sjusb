@@ -144,6 +144,25 @@ function getMensajeCantidad(count: number): string {
   return `${count} prestadores disponibles`;
 }
 
+function ShareButton({ prestadorId }: { prestadorId: string }) {
+  const [copiado, setCopiado] = useState(false);
+  const copiar = () => {
+    const link = `${window.location.origin}/prestador/${prestadorId}`;
+    navigator.clipboard.writeText(link);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2500);
+  };
+  return (
+    <button
+      onClick={copiar}
+      className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-sm transition-colors cursor-pointer mb-2"
+    >
+      <i className={copiado ? 'ri-check-line text-green-400' : 'ri-share-line'} />
+      {copiado ? 'Link copiado!' : 'Compartir perfil'}
+    </button>
+  );
+}
+
 export default function Usuarios() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -982,6 +1001,8 @@ export default function Usuarios() {
                   <i className="ri-whatsapp-line text-xl" />
                   Contactar por WhatsApp
                 </button>
+
+                <ShareButton prestadorId={p.id} />
 
                 {clienteDni && (
                   <button

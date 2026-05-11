@@ -21,6 +21,7 @@ const NotFound = lazy(() => import('../pages/NotFound'));
 const FAQ = lazy(() => import('../pages/faq/page'));
 const Privacidad = lazy(() => import('../pages/privacidad/page'));
 const Terminos = lazy(() => import('../pages/terminos/page'));
+const PrestadorPerfil = lazy(() => import('../pages/prestador/page'));
 
 const routes: RouteObject[] = [
   {
@@ -75,6 +76,10 @@ const routes: RouteObject[] = [
   {
     path: '/terminos',
     element: <Terminos />,
+  },
+  {
+    path: '/prestador/:id',
+    element: <PrestadorPerfil />,
   },
   {
     path: '*',
