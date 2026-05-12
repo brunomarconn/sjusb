@@ -21,7 +21,7 @@ export default function RegistroPrestador({ onVolverLogin }: RegistroPrestadorPr
         </p>
 
         <a
-          href="https://wa.me/543513227999?text=Hola!%20Quiero%20registrarme%20como%20prestador%20en%20MrServicios."
+          href="https://wa.me/543512178797?text=Hola!%20Quiero%20registrarme%20como%20prestador%20en%20MrServicios."
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold text-sm transition-colors cursor-pointer mb-3"

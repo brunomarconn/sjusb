@@ -467,10 +467,10 @@ export default function PrestadoresAdmin() {
     const q = busqueda.toLowerCase();
     const matchQ =
       !q ||
-      p.nombre.toLowerCase().includes(q) ||
-      p.apellido.toLowerCase().includes(q) ||
-      p.dni.includes(q) ||
-      p.categoria.toLowerCase().includes(q) ||
+      (p.nombre || '').toLowerCase().includes(q) ||
+      (p.apellido || '').toLowerCase().includes(q) ||
+      (p.dni || '').includes(q) ||
+      (p.categoria || '').toLowerCase().includes(q) ||
       (p.zona || '').toLowerCase().includes(q) ||
       (p.email || '').toLowerCase().includes(q);
     const activo = p.enabled !== false;

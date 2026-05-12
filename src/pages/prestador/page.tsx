@@ -78,15 +78,6 @@ export default function PrestadorPage() {
     setTimeout(() => setCopiado(false), 2500);
   }
 
-  function abrirWhatsApp() {
-    if (!prestador?.telefono) return;
-    const num = prestador.telefono.replace(/\D/g, '');
-    const msg = encodeURIComponent(
-      `Hola! Te contacto desde *MrServicios*. Vi tu perfil de *${prestador.categoria}* y me interesa tu servicio. ¿Podemos coordinar?`
-    );
-    window.open(`https://wa.me/549${num}?text=${msg}`, '_blank');
-  }
-
   const promedio =
     valoraciones.length > 0
       ? (valoraciones.reduce((s, v) => s + v.puntuacion, 0) / valoraciones.length).toFixed(1)
@@ -226,23 +217,14 @@ export default function PrestadorPage() {
               <p className="text-gray-300 text-sm leading-relaxed">{prestador.descripcion}</p>
             )}
 
-            {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-1">
-              {prestador.telefono && (
-                <button
-                  onClick={abrirWhatsApp}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-sm transition-colors cursor-pointer"
-                >
-                  <i className="ri-whatsapp-line text-lg" />
-                  Contactar por WhatsApp
-                </button>
-              )}
+            {/* Botón de acción principal */}
+            <div className="pt-1">
               <button
                 onClick={() => navigate(`/reservar/${prestador.id}`)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#e2b040] hover:bg-[#f0d080] text-[#1a1a2e] rounded-xl font-bold text-sm transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-sm transition-colors cursor-pointer"
               >
-                <i className="ri-calendar-check-line" />
-                Hacer una reserva
+                <i className="ri-whatsapp-line text-lg" />
+                Contactar por WhatsApp
               </button>
             </div>
 
