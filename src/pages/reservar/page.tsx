@@ -181,7 +181,8 @@ export default function ReservarPage() {
       const diaStr   = formatFecha(diaSeleccionado);
       const turnoStr = turnoSeleccionado === 'mañana' ? 'Mañana' : 'Tarde';
 
-      // ── 1. Construir y abrir WhatsApp PRIMERO (no depende de nada externo) ──
+      // ── 1. Abrir WhatsApp de forma SINCRÓNICA (antes de cualquier await) ──
+      //    Los navegadores bloquean window.open() si se llama tras una operación async.
       const mensaje = `Hola! 👋 ¿Cómo estás?
 
 Te contacto desde *ServiciosYa* porque me interesa contratar tu servicio de *${prestador.categoria}* 🔧
@@ -192,7 +193,12 @@ Quería consultar si tenés disponibilidad para el día *${diaStr}* en el horari
 
 ¡Espero tu respuesta, gracias!`;
 
-      // ── 2. Guardar reserva directamente en Supabase ──
+      const numeroPrestador = prestador.telefono?.replace(/\D/g, '');
+      if (numeroPrestador) {
+        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      }
+
+      // ── 2. Guardar reserva en Supabase (después de abrir WhatsApp) ──
       const reservaPayload = {
         prestador_id: prestador.id,
         nombre:   nombre.trim(),
@@ -222,11 +228,6 @@ Quería consultar si tenés disponibilidad para el día *${diaStr}* en el horari
         } else {
           throw insertResult.error;
         }
-      }
-
-      const numeroPrestador = prestador.telefono?.replace(/\D/g, '');
-      if (numeroPrestador) {
-        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
       }
 
       // ── 3. Marcar como reservado (habilita valoración) ──
