@@ -472,7 +472,7 @@ export default function PrestadoresAdmin() {
       p.dni.includes(q) ||
       p.categoria.toLowerCase().includes(q) ||
       (p.zona || '').toLowerCase().includes(q) ||
-      p.email.toLowerCase().includes(q);
+      (p.email || '').toLowerCase().includes(q);
     const activo = p.enabled !== false;
     const matchE =
       estadoFiltro === 'todos' ||
