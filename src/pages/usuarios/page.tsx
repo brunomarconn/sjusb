@@ -237,12 +237,21 @@ export default function Usuarios() {
       const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
 
-      const result = await supabase
+      // Intentar con filtro enabled=true primero
+      let result = await supabase
         .from('prestadores')
         .select(selectBase)
+        .eq('enabled', true)
         .order('created_at', { ascending: false });
 
-      // Si falla por la columna enabled (aún no migrada), reintentamos sin el filtro
+      // Si falla porque la columna 'enabled' aún no existe en el esquema, reintentar sin el filtro
+      if (result.error && (result.error.message?.toLowerCase().includes('enabled') || result.error.message?.toLowerCase().includes('schema cache'))) {
+        result = await supabase
+          .from('prestadores')
+          .select(selectBase)
+          .order('created_at', { ascending: false });
+      }
+
       if (result.error) throw result.error;
 
       if (result.data && result.data.length > 0) {

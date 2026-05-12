@@ -64,10 +64,10 @@ export default function AppHeader({
         <div className="flex flex-col items-center cursor-pointer" onClick={() => navigate('/')}>
           <img
             src="https://public.readdy.ai/ai/img_res/ebf8ba70-3b01-48d0-b580-89cd2fe53a3e.png"
-            alt="ServiciosYa Logo"
+            alt="MrServicios Logo"
             className="w-10 h-10 object-contain"
           />
-          <span className="text-xs font-bold text-[#e2b040] leading-tight mt-0.5">ServiciosYa</span>
+          <span className="text-xs font-bold text-[#e2b040] leading-tight mt-0.5">MrServicios</span>
         </div>
 
         {/* Derecha */}

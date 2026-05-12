@@ -4,7 +4,7 @@ import AppHeader from '../../components/AppHeader';
 const secciones = [
   {
     titulo: '1. Responsable del tratamiento',
-    contenido: `El responsable del tratamiento de los datos personales es ServiciosYa con domicilio en Villa Allende, provincia de Córdoba, Argentina. Para cualquier consulta sobre privacidad podés contactarte al correo electrónico mrsserviciossoluciones@gmail.com o a los teléfonos publicados en el sitio.`,
+    contenido: `El responsable del tratamiento de los datos personales es MrServicios con domicilio en Villa Allende, provincia de Córdoba, Argentina. Para cualquier consulta sobre privacidad podés contactarte al correo electrónico mrsserviciossoluciones@gmail.com o a los teléfonos publicados en el sitio.`,
   },
   {
     titulo: '2. Datos personales que recopilamos',
@@ -30,7 +30,7 @@ const secciones = [
   },
   {
     titulo: '4. Uso de WhatsApp y comunicaciones externas',
-    contenido: `La plataforma no intermedia en el contacto entre usuarios y prestadores; el contacto se realiza directamente por WhatsApp. Al hacerlo, el usuario comparte su número de teléfono con el prestador y con Meta Platforms, Inc. (empresa propietaria de WhatsApp). Esta Política no regula el uso de datos realizado por WhatsApp ni por el prestador. ServiciosYa no se responsabiliza por el uso de los datos una vez que el contacto se realiza fuera de la plataforma.`,
+    contenido: `La plataforma no intermedia en el contacto entre usuarios y prestadores; el contacto se realiza directamente por WhatsApp. Al hacerlo, el usuario comparte su número de teléfono con el prestador y con Meta Platforms, Inc. (empresa propietaria de WhatsApp). Esta Política no regula el uso de datos realizado por WhatsApp ni por el prestador. MrServicios no se responsabiliza por el uso de los datos una vez que el contacto se realiza fuera de la plataforma.`,
   },
   {
     titulo: '5. Cookies y tecnologías similares',
@@ -56,11 +56,11 @@ En ningún caso la plataforma venderá datos personales a terceros.`,
   },
   {
     titulo: '7. Transferencias internacionales',
-    contenido: `Algunos proveedores tecnológicos pueden estar ubicados fuera de Argentina. ServiciosYa garantiza que se aplicarán medidas adecuadas de protección (contratos de protección de datos, cláusulas modelo o adhesión al RGPD si aplica). Al usar la plataforma, el usuario consiente que sus datos puedan transferirse a otros países para cumplir las finalidades descritas.`,
+    contenido: `Algunos proveedores tecnológicos pueden estar ubicados fuera de Argentina. MrServicios garantiza que se aplicarán medidas adecuadas de protección (contratos de protección de datos, cláusulas modelo o adhesión al RGPD si aplica). Al usar la plataforma, el usuario consiente que sus datos puedan transferirse a otros países para cumplir las finalidades descritas.`,
   },
   {
     titulo: '8. Seguridad de los datos',
-    contenido: `ServiciosYa aplica medidas de seguridad técnicas y organizativas para proteger los datos contra accesos no autorizados, pérdidas o modificaciones: cifrado HTTPS, mecanismos de autenticación, almacenamiento seguro de contraseñas y controles de acceso. Ningún sistema es completamente seguro; los usuarios deben utilizar contraseñas seguras y mantener la confidencialidad de sus credenciales.`,
+    contenido: `MrServicios aplica medidas de seguridad técnicas y organizativas para proteger los datos contra accesos no autorizados, pérdidas o modificaciones: cifrado HTTPS, mecanismos de autenticación, almacenamiento seguro de contraseñas y controles de acceso. Ningún sistema es completamente seguro; los usuarios deben utilizar contraseñas seguras y mantener la confidencialidad de sus credenciales.`,
   },
   {
     titulo: '9. Plazo de conservación',
@@ -88,7 +88,7 @@ Para ejercer estos derechos, escribí a mrsserviciossoluciones@gmail.com adjunta
   },
   {
     titulo: '11. Actualizaciones de esta política',
-    contenido: `ServiciosYa podrá modificar esta Política para adaptarla a cambios legislativos o mejoras en el servicio. La fecha de última actualización estará indicada al inicio. Los cambios significativos se comunicarán a través del sitio web o por correo electrónico. El uso continuado de la plataforma implica la aceptación de la política modificada.`,
+    contenido: `MrServicios podrá modificar esta Política para adaptarla a cambios legislativos o mejoras en el servicio. La fecha de última actualización estará indicada al inicio. Los cambios significativos se comunicarán a través del sitio web o por correo electrónico. El uso continuado de la plataforma implica la aceptación de la política modificada.`,
   },
 ];
 
@@ -117,7 +117,7 @@ export default function Privacidad() {
         </div>
 
         <div className="bg-[#16213e]/40 border border-[#e2b040]/15 rounded-2xl p-4 mb-6 text-sm text-gray-400 leading-relaxed">
-          Este documento describe cómo ServiciosYa recopila, usa y protege tu información personal en la plataforma. Al usar el sitio, aceptás los términos aquí descritos.
+          Este documento describe cómo MrServicios recopila, usa y protege tu información personal en la plataforma. Al usar el sitio, aceptás los términos aquí descritos.
         </div>
 
         <div className="space-y-4">

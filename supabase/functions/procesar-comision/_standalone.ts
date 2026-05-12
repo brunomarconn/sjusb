@@ -26,7 +26,7 @@ async function crearPreferencia(comisionId: string, descripcion: string, appUrl:
     back_urls: { success: `${appUrl}/prestadores?pago=ok`, failure: `${appUrl}/prestadores?pago=error`, pending: `${appUrl}/prestadores?pago=pendiente` },
     notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook-comision`,
     external_reference: `comision_${comisionId}`,
-    statement_descriptor: 'SERVICIOSYA',
+    statement_descriptor: 'MrServicios',
     auto_return: 'approved',
   };
 
@@ -81,7 +81,7 @@ serve(async (req: Request) => {
     if (cErr) throw cErr;
 
     // 5. Generar link MP
-    const appUrl = Deno.env.get('APP_URL') || 'https://serviciosya.com';
+    const appUrl = Deno.env.get('APP_URL') || 'https://mrservicios.vercel.app';
     const descripcionMP = `${reserva.prestadores?.categoria ?? 'Servicio'} – ${reserva.dia} ${reserva.turno}`;
     let mpResult = null;
     try {
@@ -115,12 +115,12 @@ serve(async (req: Request) => {
           method: 'POST',
           headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            from: 'ServiciosYa <onboarding@resend.dev>',
+            from: 'MrServicios <onboarding@resend.dev>',
             to: [adminEmail],
             subject: `Cobro comisión — ${nombreP}`,
             html: `
               <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#1a1a2e;color:#fff;padding:32px;border-radius:12px;">
-                <h1 style="color:#e2b040;margin:0 0 8px;">ServiciosYa</h1>
+                <h1 style="color:#e2b040;margin:0 0 8px;">MrServicios</h1>
                 <p style="color:#9ca3af;margin:0 0 24px;">Comisión generada automáticamente</p>
                 <div style="background:#16213e;border:1px solid #e2b040;border-radius:8px;padding:20px;margin-bottom:16px;">
                   <h2 style="color:#e2b040;margin:0 0 12px;">Prestador</h2>

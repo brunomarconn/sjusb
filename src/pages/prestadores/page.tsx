@@ -43,7 +43,6 @@ export default function PrestadoresPage() {
   if (vista === 'registro') {
     return (
       <RegistroPrestador
-        onRegistroExitoso={handleRegistroExitoso}
         onVolverLogin={() => setVista('login')}
       />
     );

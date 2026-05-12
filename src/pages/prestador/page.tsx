@@ -82,7 +82,7 @@ export default function PrestadorPage() {
     if (!prestador?.telefono) return;
     const num = prestador.telefono.replace(/\D/g, '');
     const msg = encodeURIComponent(
-      `Hola! Te contacto desde *ServiciosYa*. Vi tu perfil de *${prestador.categoria}* y me interesa tu servicio. ¿Podemos coordinar?`
+      `Hola! Te contacto desde *MrServicios*. Vi tu perfil de *${prestador.categoria}* y me interesa tu servicio. ¿Podemos coordinar?`
     );
     window.open(`https://wa.me/549${num}?text=${msg}`, '_blank');
   }

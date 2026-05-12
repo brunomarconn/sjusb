@@ -4,18 +4,18 @@ import AppHeader from '../../components/AppHeader';
 const secciones = [
   {
     titulo: '1. Aceptación de los términos',
-    contenido: `Al acceder o utilizar la plataforma ServiciosYa, el usuario acepta estar sujeto a estos Términos y Condiciones de Uso y a la Política de Privacidad. Si no estás de acuerdo, debés abstenerte de usar el servicio.`,
+    contenido: `Al acceder o utilizar la plataforma MrServicios, el usuario acepta estar sujeto a estos Términos y Condiciones de Uso y a la Política de Privacidad. Si no estás de acuerdo, debés abstenerte de usar el servicio.`,
   },
   {
     titulo: '2. Definiciones',
-    contenido: `• Plataforma: el sitio web y cualquier interfaz proporcionada por ServiciosYa para facilitar la conexión entre usuarios y prestadores.
+    contenido: `• Plataforma: el sitio web y cualquier interfaz proporcionada por MrServicios para facilitar la conexión entre usuarios y prestadores.
 • Usuario: persona física que busca contratar un servicio mediante la plataforma.
 • Prestador: persona física o jurídica que ofrece servicios profesionales a través de la plataforma, habiéndose registrado y suministrado sus datos.
 • Contenido: textos, imágenes, videos, reseñas y cualquier material que los usuarios o la plataforma publiquen.`,
   },
   {
     titulo: '3. Objeto del servicio',
-    contenido: `ServiciosYa actúa como intermediario digital que conecta a usuarios con prestadores de servicios verificados. El sitio permite buscar categorías de servicios, revisar perfiles de prestadores, contactarlos mediante WhatsApp y dejar valoraciones sobre la calidad del servicio. La plataforma no presta los servicios ofrecidos por los prestadores ni participa de la relación contractual entre ambas partes.`,
+    contenido: `MrServicios actúa como intermediario digital que conecta a usuarios con prestadores de servicios verificados. El sitio permite buscar categorías de servicios, revisar perfiles de prestadores, contactarlos mediante WhatsApp y dejar valoraciones sobre la calidad del servicio. La plataforma no presta los servicios ofrecidos por los prestadores ni participa de la relación contractual entre ambas partes.`,
   },
   {
     titulo: '4. Registro y cuentas',
@@ -32,18 +32,18 @@ Edad mínima: al usar la plataforma, usuarios y prestadores manifiestan ser mayo
     contenido: `• Uso correcto: el sitio debe utilizarse de manera lícita, respetando las leyes vigentes y estos términos.
 • Veracidad de los datos: comprometerse a proporcionar datos veraces y mantenerlos actualizados.
 • Prohibiciones: no se permite publicar contenido ilegal, ofensivo, difamatorio, discriminatorio, sexualmente explícito, engañoso o que viole derechos de terceros. Se prohíben actividades que dañen, inutilicen o deterioren la plataforma.
-• Propiedad intelectual: el contenido subido por los prestadores debe ser de su propiedad o contar con autorización. El usuario otorga a ServiciosYa una licencia no exclusiva para mostrar ese contenido dentro de la plataforma.
-• Comentarios y valoraciones: los comentarios deben ser veraces y respetuosos. ServiciosYa podrá moderar o eliminar valoraciones que infrinjan estas reglas.`,
+• Propiedad intelectual: el contenido subido por los prestadores debe ser de su propiedad o contar con autorización. El usuario otorga a MrServicios una licencia no exclusiva para mostrar ese contenido dentro de la plataforma.
+• Comentarios y valoraciones: los comentarios deben ser veraces y respetuosos. MrServicios podrá moderar o eliminar valoraciones que infrinjan estas reglas.`,
   },
   {
     titulo: '6. Contratación y responsabilidad',
-    contenido: `Relación entre usuario y prestador: ServiciosYa no forma parte del contrato de prestación de servicios. La responsabilidad por el cumplimiento del servicio, su calidad y los términos pactados recae exclusivamente en las partes involucradas.
+    contenido: `Relación entre usuario y prestador: MrServicios no forma parte del contrato de prestación de servicios. La responsabilidad por el cumplimiento del servicio, su calidad y los términos pactados recae exclusivamente en las partes involucradas.
 
 Verificación de prestadores: la plataforma realiza un proceso de verificación básico para garantizar que los prestadores sean reales, pero no garantiza la idoneidad ni la solvencia de los prestadores. El usuario debe evaluar la conveniencia de contratar.
 
-Responsabilidad de la plataforma: ServiciosYa no se responsabiliza por daños directos o indirectos derivados de la relación entre usuario y prestador, ni por pérdidas de datos u otros perjuicios derivados del uso de la plataforma.
+Responsabilidad de la plataforma: MrServicios no se responsabiliza por daños directos o indirectos derivados de la relación entre usuario y prestador, ni por pérdidas de datos u otros perjuicios derivados del uso de la plataforma.
 
-Exclusión de garantías: el sitio se ofrece "tal como está" y "según disponibilidad". ServiciosYa no garantiza la ausencia de errores o interrupciones.`,
+Exclusión de garantías: el sitio se ofrece "tal como está" y "según disponibilidad". MrServicios no garantiza la ausencia de errores o interrupciones.`,
   },
   {
     titulo: '7. Gestión de pagos y cobros',
@@ -55,15 +55,15 @@ Exclusión de garantías: el sitio se ofrece "tal como está" y "según disponib
   },
   {
     titulo: '9. Enlaces a sitios de terceros',
-    contenido: `El sitio puede incluir enlaces (por ejemplo, a WhatsApp o redes sociales) a otras páginas web o servicios de terceros. ServiciosYa no controla ni garantiza el contenido, las políticas de privacidad o las prácticas de esos sitios. El acceso a sitios de terceros será bajo responsabilidad del usuario.`,
+    contenido: `El sitio puede incluir enlaces (por ejemplo, a WhatsApp o redes sociales) a otras páginas web o servicios de terceros. MrServicios no controla ni garantiza el contenido, las políticas de privacidad o las prácticas de esos sitios. El acceso a sitios de terceros será bajo responsabilidad del usuario.`,
   },
   {
     titulo: '10. Modificaciones de los términos',
-    contenido: `ServiciosYa podrá modificar estos Términos y Condiciones en cualquier momento. Las modificaciones entrarán en vigencia a partir de su publicación en el sitio web o de su comunicación al correo electrónico registrado. El uso continuado de la plataforma después de la modificación implicará la aceptación de los nuevos términos.`,
+    contenido: `MrServicios podrá modificar estos Términos y Condiciones en cualquier momento. Las modificaciones entrarán en vigencia a partir de su publicación en el sitio web o de su comunicación al correo electrónico registrado. El uso continuado de la plataforma después de la modificación implicará la aceptación de los nuevos términos.`,
   },
   {
     titulo: '11. Duración y terminación',
-    contenido: `Los presentes términos tienen vigencia indefinida. Cualquier usuario o prestador puede dar de baja su cuenta enviando un correo a la dirección de contacto. ServiciosYa podrá suspender o cancelar cuentas que incumplan estos términos. Asimismo, ServiciosYa podrá interrumpir el servicio en cualquier momento comunicándolo con antelación razonable, salvo causas de fuerza mayor.`,
+    contenido: `Los presentes términos tienen vigencia indefinida. Cualquier usuario o prestador puede dar de baja su cuenta enviando un correo a la dirección de contacto. MrServicios podrá suspender o cancelar cuentas que incumplan estos términos. Asimismo, MrServicios podrá interrumpir el servicio en cualquier momento comunicándolo con antelación razonable, salvo causas de fuerza mayor.`,
   },
   {
     titulo: '12. Legislación aplicable y jurisdicción',
@@ -96,7 +96,7 @@ export default function Terminos() {
         </div>
 
         <div className="bg-[#16213e]/40 border border-[#e2b040]/15 rounded-2xl p-4 mb-6 text-sm text-gray-400 leading-relaxed">
-          Al acceder o utilizar ServiciosYa aceptás estos Términos y Condiciones. Leelos con atención antes de registrarte o contratar un servicio.
+          Al acceder o utilizar MrServicios aceptás estos Términos y Condiciones. Leelos con atención antes de registrarte o contratar un servicio.
         </div>
 
         <div className="space-y-4">

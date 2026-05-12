@@ -1,5 +1,5 @@
 -- ============================================================
--- ServiciosYa — Sistema de Chat Interno
+-- MrServicios — Sistema de Chat Interno
 -- Una conversación por orden (cliente ↔ prestador, con contexto)
 -- ============================================================
 

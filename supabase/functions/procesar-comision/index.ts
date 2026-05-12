@@ -84,7 +84,7 @@ serve(async (req: Request) => {
     if (cErr) throw cErr;
 
     // 5. Generar link de MercadoPago
-    const appUrl = Deno.env.get('APP_URL') || 'https://serviciosya.com';
+    const appUrl = Deno.env.get('APP_URL') || 'https://MrServicios.com';
     const provider = await getPaymentProvider();
 
     let mpResult: { linkPago: string; preferenciaId: string } | null = null;
@@ -137,12 +137,12 @@ serve(async (req: Request) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'ServiciosYa <onboarding@resend.dev>',
+            from: 'MrServicios <onboarding@resend.dev>',
             to: [adminEmail],
             subject: `Cobro comisión — ${nombrePrestador}`,
             html: `
               <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#1a1a2e;color:#fff;padding:32px;border-radius:12px;">
-                <h1 style="color:#e2b040;margin:0 0 8px;">ServiciosYa</h1>
+                <h1 style="color:#e2b040;margin:0 0 8px;">MrServicios</h1>
                 <p style="color:#9ca3af;margin:0 0 24px;">Comisión generada automáticamente</p>
 
                 <div style="background:#16213e;border:1px solid #e2b040;border-radius:8px;padding:20px;margin-bottom:16px;">

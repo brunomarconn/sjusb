@@ -49,13 +49,13 @@ serve(async (req: Request) => {
     });
 
     const emailPayload = {
-      from: 'ServiciosYa <onboarding@resend.dev>',
+      from: 'MrServicios <onboarding@resend.dev>',
       to: [notificationEmail],
       subject: `Nueva reserva: ${nombre} ${apellido} → ${prestador_nombre ?? ''} ${prestador_apellido ?? ''}`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#1a1a2e;color:#fff;padding:32px;border-radius:12px;">
           <div style="text-align:center;margin-bottom:24px;">
-            <h1 style="color:#e2b040;margin:0;">ServiciosYa</h1>
+            <h1 style="color:#e2b040;margin:0;">MrServicios</h1>
             <p style="color:#9ca3af;margin:4px 0;">Nueva reserva recibida</p>
           </div>
 

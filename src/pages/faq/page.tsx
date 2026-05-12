@@ -14,7 +14,7 @@ const faqs = [
       'Sí. Todos los profesionales pasan por un proceso de verificación de identidad antes de ser publicados. Podés reconocerlos por el badge verde "Verificado" en su tarjeta.',
   },
   {
-    pregunta: '¿Cuánto cuesta usar ServiciosYa?',
+    pregunta: '¿Cuánto cuesta usar MrServicios?',
     respuesta:
       'Para los clientes, el uso de la plataforma es completamente gratuito. Solo pagás el servicio acordado directamente con el prestador.',
   },
@@ -31,10 +31,10 @@ const faqs = [
   {
     pregunta: '¿Cómo me registro como prestador de servicios?',
     respuesta:
-      'Ingresá a la sección "Para profesionales" desde el menú o el footer y completá el formulario de registro. El equipo de ServiciosYa revisará tu solicitud y te contactará.',
+      'Ingresá a la sección "Para profesionales" desde el menú o el footer y completá el formulario de registro. El equipo de MrServicios revisará tu solicitud y te contactará.',
   },
   {
-    pregunta: '¿En qué zonas opera ServiciosYa?',
+    pregunta: '¿En qué zonas opera MrServicios?',
     respuesta:
       'Actualmente operamos en Córdoba y zona metropolitana: Villa Allende, Mendiolaza, Río Ceballos, Unquillo, Saldán, La Calera y Córdoba Capital. Estamos en constante expansión.',
   },
@@ -49,7 +49,7 @@ const faqs = [
       'Las condiciones de cancelación dependen de cada prestador. Te recomendamos consultarlo directamente antes de confirmar para evitar inconvenientes.',
   },
   {
-    pregunta: '¿Cómo contacto al soporte de ServiciosYa?',
+    pregunta: '¿Cómo contacto al soporte de MrServicios?',
     respuesta:
       'Podés escribirnos a mrsserviciossoluciones@gmail.com o llamarnos al 351 657-6801. También encontrás nuestros datos de contacto en el footer de la página de inicio.',
   },
@@ -105,7 +105,7 @@ export default function FAQ() {
             <i className="ri-question-answer-line text-2xl text-[#e2b040]" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Preguntas frecuentes</h1>
-          <p className="text-gray-400 text-sm">Todo lo que necesitás saber sobre ServiciosYa</p>
+          <p className="text-gray-400 text-sm">Todo lo que necesitás saber sobre MrServicios</p>
         </div>
 
         <div className="space-y-3">
