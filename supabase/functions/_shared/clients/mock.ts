@@ -7,7 +7,7 @@ import type {
   CrearPagoInput,
   ResultadoPago,
   PagoWebhook,
-} from '../payment-provider.ts';
+} from './paymentProvider.ts';
 
 export class MockProvider implements PaymentProvider {
   private appUrl: string;

@@ -16,33 +16,3 @@ export function getSupabaseAdmin() {
     auth: { persistSession: false },
   });
 }
-
-/**
- * Registra un evento en la tabla orden_eventos.
- * Nunca lanza error — si falla, lo loguea silenciosamente para no
- * interrumpir el flujo principal.
- */
-export async function registrarEvento(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-  params: {
-    ordenId: string;
-    tipo: string;
-    estadoAnterior?: string | null;
-    estadoNuevo?: string | null;
-    datos?: Record<string, unknown>;
-    creadoPor?: string;
-  }
-): Promise<void> {
-  try {
-    await supabase.from('orden_eventos').insert({
-      orden_id: params.ordenId,
-      tipo: params.tipo,
-      estado_anterior: params.estadoAnterior ?? null,
-      estado_nuevo: params.estadoNuevo ?? null,
-      datos: params.datos ?? {},
-      creado_por: params.creadoPor ?? 'sistema',
-    });
-  } catch (err) {
-    console.error(`[registrarEvento] Error al registrar evento ${params.tipo}:`, err);
-  }
-}

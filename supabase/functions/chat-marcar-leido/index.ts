@@ -13,74 +13,29 @@
 //   - Admin: ambos contadores
 // ─────────────────────────────────────────────────────────────
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { getSupabaseAdmin } from '../_shared/supabase-admin.ts';
-import {
-  corsPreflightResponse,
-  okResponse,
-  errorResponse,
-  validarAdminSecret,
-} from '../_shared/cors.ts';
+import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts';
+import { corsPreflightResponse } from '../_shared/middlewares/cors.ts';
+import { resolverIdentidad, sinAutenticar } from '../_shared/middlewares/auth.ts';
+import { okResponse, errorResponse } from '../_shared/utils/responses.ts';
+import { marcarLeido, ValidacionError, NoEncontradoError, AccesoDenegadoError } from '../_shared/services/chatService.ts';
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return corsPreflightResponse();
 
   try {
-    const supabase = getSupabaseAdmin();
+    const identidad = resolverIdentidad(req);
+    if (sinAutenticar(identidad)) return errorResponse('Se requiere autenticación', 401);
 
-    // ── Control de acceso ──────────────────────────────────
-    const esAdmin     = validarAdminSecret(req);
-    const clienteDni  = req.headers.get('x-cliente-dni');
-    const prestadorId = req.headers.get('x-prestador-id');
-
-    if (!esAdmin && !clienteDni && !prestadorId) {
-      return errorResponse('Se requiere autenticación', 401);
-    }
-
+    const db = getSupabaseAdmin();
     const body = await req.json().catch(() => ({}));
     const { conversacion_id } = body as { conversacion_id?: string };
 
-    if (!conversacion_id) return errorResponse('conversacion_id requerido', 400);
-
-    // ── Verificar pertenencia ──────────────────────────────
-    const { data: conv, error: convError } = await supabase
-      .from('conversaciones')
-      .select('id, cliente_dni, prestador_id')
-      .eq('id', conversacion_id)
-      .single();
-
-    if (convError || !conv) {
-      return errorResponse('Conversación no encontrada', 404);
-    }
-
-    if (!esAdmin) {
-      if (clienteDni && conv.cliente_dni !== clienteDni) {
-        return errorResponse('Acceso denegado', 403);
-      }
-      if (prestadorId && conv.prestador_id !== prestadorId) {
-        return errorResponse('Acceso denegado', 403);
-      }
-    }
-
-    // ── Resetear contadores ────────────────────────────────
-    const updates: Record<string, number> = {};
-    if (esAdmin) {
-      updates.no_leidos_cliente   = 0;
-      updates.no_leidos_prestador = 0;
-    } else if (clienteDni) {
-      updates.no_leidos_cliente = 0;
-    } else if (prestadorId) {
-      updates.no_leidos_prestador = 0;
-    }
-
-    const { error: updateError } = await supabase
-      .from('conversaciones')
-      .update(updates)
-      .eq('id', conversacion_id);
-
-    if (updateError) throw updateError;
-
+    await marcarLeido(db, identidad, conversacion_id ?? '');
     return okResponse({ ok: true });
   } catch (err) {
+    if (err instanceof ValidacionError) return errorResponse(err.message, 400);
+    if (err instanceof NoEncontradoError) return errorResponse(err.message, 404);
+    if (err instanceof AccesoDenegadoError) return errorResponse(err.message, 403);
     console.error('[chat-marcar-leido]', err);
     return errorResponse('Error interno', 500, String(err));
   }

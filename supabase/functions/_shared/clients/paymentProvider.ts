@@ -60,11 +60,11 @@ export async function getPaymentProvider(): Promise<PaymentProvider> {
   if (mode === 'mercadopago') {
     const token = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!token) throw new Error('Falta MERCADOPAGO_ACCESS_TOKEN');
-    const { MercadoPagoProvider } = await import('./providers/mercadopago.ts');
+    const { MercadoPagoProvider } = await import('./mercadopago.ts');
     return new MercadoPagoProvider(token);
   }
 
   // Por defecto: mock (para desarrollo y testing)
-  const { MockProvider } = await import('./providers/mock.ts');
+  const { MockProvider } = await import('./mock.ts');
   return new MockProvider(appUrl);
 }

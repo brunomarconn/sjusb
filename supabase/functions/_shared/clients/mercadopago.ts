@@ -8,7 +8,7 @@ import type {
   ResultadoPago,
   PagoWebhook,
   EstadoPago,
-} from '../payment-provider.ts';
+} from './paymentProvider.ts';
 
 const MP_BASE = 'https://api.mercadopago.com';
 

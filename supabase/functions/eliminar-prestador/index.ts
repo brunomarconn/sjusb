@@ -4,25 +4,16 @@
 // Elimina un prestador y datos relacionados. Solo admin.
 // ─────────────────────────────────────────────────────────────
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { getSupabaseAdmin } from '../_shared/supabase-admin.ts';
+import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts';
+import { corsPreflightResponse } from '../_shared/middlewares/cors.ts';
+import { validarAdminSecret } from '../_shared/middlewares/auth.ts';
+import { okResponse, errorResponse } from '../_shared/utils/responses.ts';
+import { getErrorMessage } from '../_shared/utils/errors.ts';
 import {
-  corsPreflightResponse,
-  okResponse,
-  errorResponse,
-  validarAdminSecret,
-} from '../_shared/cors.ts';
-
-function getErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    return error.message;
-  }
-  return error instanceof Error ? error.message : 'Error inesperado';
-}
-
-function isMissingTableError(error: unknown): boolean {
-  const message = getErrorMessage(error).toLowerCase();
-  return message.includes('could not find the table') || message.includes('does not exist');
-}
+  eliminarPrestador,
+  PrestadorNoEncontradoError,
+  EliminacionFallidaError,
+} from '../_shared/services/eliminarPrestadorService.ts';
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return corsPreflightResponse();
@@ -34,65 +25,14 @@ serve(async (req: Request) => {
   try {
     const { prestador_id } = await req.json();
     const prestadorId = String(prestador_id || '').trim();
-
     if (!prestadorId) return errorResponse('prestador_id es requerido');
 
-    const supabase = getSupabaseAdmin();
-
-    const { data: prestador, error: prestadorError } = await supabase
-      .from('prestadores')
-      .select('id')
-      .eq('id', prestadorId)
-      .maybeSingle();
-
-    if (prestadorError) throw prestadorError;
-    if (!prestador) return errorResponse('Prestador no encontrado', 404);
-
-    const { data: ordenes } = await supabase
-      .from('ordenes')
-      .select('id')
-      .eq('prestador_id', prestadorId);
-
-    const ordenIds = (ordenes || []).map((orden) => orden.id).filter(Boolean);
-
-    const relatedDeletes = [
-      supabase.from('valoraciones').delete().eq('prestador_id', prestadorId),
-      supabase.from('reservas').delete().eq('prestador_id', prestadorId),
-      supabase.from('disponibilidad_prestadores').delete().eq('prestador_id', prestadorId),
-      supabase.from('conversaciones').delete().eq('prestador_id', prestadorId),
-    ];
-
-    for (const operation of relatedDeletes) {
-      const { error } = await operation;
-      if (error && !isMissingTableError(error)) throw error;
-    }
-
-    if (ordenIds.length > 0) {
-      const { error: eventosError } = await supabase
-        .from('orden_eventos')
-        .delete()
-        .in('orden_id', ordenIds);
-      if (eventosError && !isMissingTableError(eventosError)) throw eventosError;
-
-      const { error: ordenesError } = await supabase
-        .from('ordenes')
-        .delete()
-        .eq('prestador_id', prestadorId);
-      if (ordenesError && !isMissingTableError(ordenesError)) throw ordenesError;
-    }
-
-    const { data: eliminado, error: deleteError } = await supabase
-      .from('prestadores')
-      .delete()
-      .eq('id', prestadorId)
-      .select('id')
-      .maybeSingle();
-
-    if (deleteError) throw deleteError;
-    if (!eliminado) return errorResponse('No se pudo eliminar el prestador', 409);
-
-    return okResponse({ ok: true, prestador_id: prestadorId });
+    const db = getSupabaseAdmin();
+    const resultado = await eliminarPrestador(db, prestadorId);
+    return okResponse({ ok: true, prestador_id: resultado.prestador_id });
   } catch (err) {
+    if (err instanceof PrestadorNoEncontradoError) return errorResponse(err.message, 404);
+    if (err instanceof EliminacionFallidaError) return errorResponse(err.message, 409);
     console.error('[eliminar-prestador]', err);
     return errorResponse('Error al eliminar prestador', 500, getErrorMessage(err));
   }
