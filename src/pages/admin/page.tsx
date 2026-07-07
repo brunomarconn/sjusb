@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { chatService } from '../../services/chatService';
+import { chatApi } from '../../api/chatApi';
 import type { Conversacion, ConversacionResumen, Mensaje } from '../../types/chat';
 import { formatFechaCompleta, formatHoraChat } from '../../types/chat';
 import PrestadoresAdmin from './PrestadoresAdmin';
 import ReservasAdmin from './ReservasAdmin';
+import { useAdminSession } from '../../context/AdminSessionContext';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
@@ -312,7 +313,8 @@ function MensajesAdminView({
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const [autenticado, setAutenticado] = useState(sessionStorage.getItem('mservicios_admin_ok') === '1');
+  const adminSession = useAdminSession();
+  const autenticado = adminSession.isAuthenticated;
   const [passwordInput, setPasswordInput] = useState('');
   const [errorAuth, setErrorAuth] = useState('');
   const [vista, setVista] = useState<AdminView>('home');
@@ -334,8 +336,7 @@ export default function AdminPage() {
       return;
     }
     if (passwordInput === ADMIN_SECRET) {
-      setAutenticado(true);
-      sessionStorage.setItem('mservicios_admin_ok', '1');
+      adminSession.login();
     } else {
       setErrorAuth('Contraseña incorrecta.');
     }
@@ -345,7 +346,7 @@ export default function AdminPage() {
     setCargandoListaChats(true);
     setErrorChats('');
     try {
-      const res = await chatService.listarConversaciones({ esAdmin: true }, filtros);
+      const res = await chatApi.listarConversaciones({ esAdmin: true }, filtros);
       setConversaciones(res.conversaciones);
     } catch (err: unknown) {
       setErrorChats(err instanceof Error ? err.message : 'Error al cargar conversaciones');
@@ -363,8 +364,8 @@ export default function AdminPage() {
     setCargandoConv(true);
     try {
       const res = conv.orden_id
-        ? await chatService.obtenerConversacion(conv.orden_id, { esAdmin: true })
-        : await chatService.abrirConversacionPorId(conv.id, { esAdmin: true });
+        ? await chatApi.obtenerConversacion(conv.orden_id, { esAdmin: true })
+        : await chatApi.abrirConversacionPorId(conv.id, { esAdmin: true });
       setConvActiva(res.conversacion);
       setMensajes(res.mensajes);
     } catch (err) {
@@ -440,9 +441,8 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => {
-                setAutenticado(false);
+                adminSession.logout();
                 setPasswordInput('');
-                sessionStorage.removeItem('mservicios_admin_ok');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-white/5 text-gray-400 rounded-xl text-sm hover:bg-white/10 transition-colors"
             >

@@ -4,6 +4,7 @@ import Fuse from 'fuse.js';
 import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
 import AppHeader from '../../components/AppHeader';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 import { CATEGORIAS_FILTRO_USUARIOS } from '../../constants/categorias';
 import { SINONIMOS_PROFESIONES } from '../../constants/sinonimos';
 
@@ -109,27 +110,11 @@ const otrosServicios = [
   { label: 'Servicio Técnico Informático', cat: 'Servicio Técnico Informático' },
 ];
 
-const RESERVADOS_KEY = 'mservicios_reservados';
-
 function splitZonas(zona?: string): string[] {
   return (zona || '')
     .split(',')
     .map((z) => z.trim())
     .filter(Boolean);
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function marcarReservado(prestadorId: string) {
-  const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
-  if (!reservados.includes(prestadorId)) {
-    reservados.push(prestadorId);
-    localStorage.setItem(RESERVADOS_KEY, JSON.stringify(reservados));
-  }
-}
-
-function yaReservo(prestadorId: string): boolean {
-  const reservados: string[] = JSON.parse(localStorage.getItem(RESERVADOS_KEY) || '[]');
-  return reservados.includes(prestadorId);
 }
 
 function getTituloCategoria(cat: string): string {
@@ -198,7 +183,8 @@ export default function Usuarios() {
     return () => { document.body.style.overflow = ''; };
   }, [prestadorModal]);
 
-  const clienteDni = localStorage.getItem('mservicios_cliente_dni');
+  const clienteSession = useClienteSession();
+  const clienteDni = clienteSession.dni;
 
   useEffect(() => {
     cargarPrestadores();
@@ -297,7 +283,7 @@ export default function Usuarios() {
       if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) navigate('/mi-cuenta');
       return;
     }
-    if (!yaReservo(prestador.id)) {
+    if (!clienteSession.yaReservo(prestador.id)) {
       alert('Solo podés valorar a un prestador con quien hayas hecho una reserva.');
       return;
     }
@@ -646,7 +632,7 @@ export default function Usuarios() {
                 const vals = prestador.valoraciones || [];
                 const promedio = calcularPromedio(vals);
                 const expandido = mostrarValoraciones === prestador.id;
-                const puedeValorar = clienteDni && yaReservo(prestador.id);
+                const puedeValorar = clienteDni && clienteSession.yaReservo(prestador.id);
                 const descExpandida = expandedDesc.has(prestador.id);
 
                 return (
@@ -1041,7 +1027,7 @@ export default function Usuarios() {
                   </div>
                 )}
 
-                {clienteDni && yaReservo(p.id) && (
+                {clienteDni && clienteSession.yaReservo(p.id) && (
                   <button
                     onClick={() => { setPrestadorModal(null); handleValorar(p); }}
                     className="mt-4 w-full py-2.5 border border-[#e2b040]/30 text-[#e2b040] rounded-xl text-sm font-semibold hover:bg-[#e2b040]/10 transition-colors cursor-pointer flex items-center justify-center gap-2"

@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────────────────────
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useClienteSession } from '../context/ClienteSessionContext';
+import { usePrestadorSession } from '../context/PrestadorSessionContext';
 
 interface AppHeaderProps {
   /** Fondo transparente + efecto scroll (solo para inicio) */
@@ -27,11 +29,11 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const clienteSession = useClienteSession();
+  const prestadorSession = usePrestadorSession();
 
-  const clienteDni   = localStorage.getItem('mservicios_cliente_dni');
-  const prestadorIdLS = localStorage.getItem('mservicios_prestador_id');
-  const logueadoComoCliente   = Boolean(clienteDni);
-  const logueadoComoPrestador = Boolean(prestadorIdLS) && !clienteDni;
+  const logueadoComoCliente   = Boolean(clienteSession.dni);
+  const logueadoComoPrestador = Boolean(prestadorSession.prestadorId) && !clienteSession.dni;
   const estaLogueado = logueadoComoCliente || logueadoComoPrestador;
 
   const bgClass = transparent
@@ -46,9 +48,8 @@ export default function AppHeader({
       onCerrarSesion();
       return;
     }
-    localStorage.removeItem('mservicios_cliente_dni');
-    localStorage.removeItem('mservicios_prestador_id');
-    localStorage.removeItem('dniPrestador');
+    clienteSession.logout();
+    prestadorSession.logout();
     navigate('/');
   }
 

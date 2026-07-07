@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, type Prestador, type Valoracion } from '../../../lib/supabase';
-import { reservasService, comisionesService } from '../../../services/reservasService';
+import { reservasApi } from '../../../api/reservasApi';
+import { comisionesApi } from '../../../api/comisionesApi';
+import { usePrestadorSession } from '../../../context/PrestadorSessionContext';
 import type { Reserva, Comision } from '../../../types/reservas';
 import {
   RESERVA_ESTADO_LABELS,
@@ -34,6 +36,7 @@ const esVideoUrl = (url: string) =>
 
 export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelPrestadorProps) {
   const navigate = useNavigate();
+  const prestadorSession = usePrestadorSession();
 
   const [prestador, setPrestador] = useState<Prestador | null>(null);
   const [valoraciones, setValoraciones] = useState<Valoracion[]>([]);
@@ -70,8 +73,8 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     setCargandoReservas(true);
     try {
       const [reservasResult, comisionesResult] = await Promise.allSettled([
-        reservasService.listarTodas({ prestador_id: prestadorId }),
-        comisionesService.listarPorPrestador(prestadorId),
+        reservasApi.listarTodas({ prestador_id: prestadorId }),
+        comisionesApi.listarPorPrestador(prestadorId),
       ]);
       setMisReservas(reservasResult.status === 'fulfilled' ? reservasResult.value : []);
       setMisComisiones(comisionesResult.status === 'fulfilled' ? comisionesResult.value : []);
@@ -92,7 +95,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
 
       if (prestadorInfo) {
         setPrestador(prestadorInfo);
-        localStorage.setItem('mservicios_prestador_id', prestadorInfo.id);
+        prestadorSession.setPrestadorId(prestadorInfo.id);
         cargarDisponibilidad(prestadorInfo.id);
         cargarReservasPrestador(prestadorInfo.id);
 
@@ -120,7 +123,7 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     if (!modalCancelacion || !motivoCancelacion.trim()) return;
     setEnviandoCancelacion(true);
     try {
-      await reservasService.actualizarEstado(modalCancelacion, 'cancelacion_solicitada_por_prestador', {
+      await reservasApi.actualizarEstado(modalCancelacion, 'cancelacion_solicitada_por_prestador', {
         motivo_cancelacion: motivoCancelacion.trim(),
       });
       setModalCancelacion(null);

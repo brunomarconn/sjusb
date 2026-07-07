@@ -46,7 +46,7 @@ async function apiFetch<T>(url: string, options: RequestInit): Promise<T> {
 
 // ── API pública ────────────────────────────────────────────
 
-export const chatService = {
+export const chatApi = {
 
   /**
    * Lista conversaciones del usuario con snapshot y no_leidos.

@@ -8,22 +8,25 @@ import React, {
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { chatService } from '../../services/chatService';
+import { chatApi } from '../../api/chatApi';
 import type {
   ConversacionResumen,
   Conversacion,
   Mensaje,
 } from '../../types/chat';
 import { formatHoraChat, formatFechaCompleta } from '../../types/chat';
+import { useClienteSession } from '../../context/ClienteSessionContext';
+import { usePrestadorSession } from '../../context/PrestadorSessionContext';
+import { useAdminSession } from '../../context/AdminSessionContext';
 
 // ─────────────────────────────────────────────────────────────
 // Helpers de identidad
 // ─────────────────────────────────────────────────────────────
 
 function useIdentidad() {
-  const clienteDni  = localStorage.getItem('mservicios_cliente_dni')   ?? undefined;
-  const prestadorId = localStorage.getItem('mservicios_prestador_id')  ?? undefined;
-  const esAdmin     = sessionStorage.getItem('mservicios_admin_ok') === '1';
+  const clienteDni  = useClienteSession().dni ?? undefined;
+  const prestadorId = usePrestadorSession().prestadorId ?? undefined;
+  const esAdmin     = useAdminSession().isAuthenticated;
   const tieneCliente = Boolean(clienteDni);
   const tienePrestador = Boolean(prestadorId);
 
@@ -234,7 +237,7 @@ function PanelConversacion({
     setEnviando(true);
     setError('');
     try {
-      const { mensaje } = await chatService.enviarMensaje(
+      const { mensaje } = await chatApi.enviarMensaje(
         conversacion.id,
         contenido,
         auth(identidad)
@@ -427,7 +430,7 @@ export default function ChatPage() {
       setCargandoConv(true);
       setMostrandoLista(false);
       try {
-        const res = await chatService.abrirConversacionDirecta(
+        const res = await chatApi.abrirConversacionDirecta(
           prestadorParam,
           auth(identidad)
         );
@@ -448,7 +451,7 @@ export default function ChatPage() {
     setCargandoLista(true);
     setErrorLista('');
     try {
-      const res = await chatService.listarConversaciones(auth(identidad), filtros);
+      const res = await chatApi.listarConversaciones(auth(identidad), filtros);
       setConversaciones(res.conversaciones);
     } catch (err: unknown) {
       setErrorLista(err instanceof Error ? err.message : 'Error al cargar conversaciones');
@@ -469,7 +472,7 @@ export default function ChatPage() {
     (async () => {
       setCargandoConv(true);
       try {
-        const res = await chatService.obtenerConversacion(ordenId, auth(identidad));
+        const res = await chatApi.obtenerConversacion(ordenId, auth(identidad));
         setConvActiva(res.conversacion);
         setMensajes(res.mensajes);
         setMostrandoLista(false);
@@ -489,8 +492,8 @@ export default function ChatPage() {
     setMostrandoLista(false);
     try {
       const res = conv.orden_id
-        ? await chatService.obtenerConversacion(conv.orden_id, auth(identidad))
-        : await chatService.abrirConversacionPorId(conv.id, auth(identidad));
+        ? await chatApi.obtenerConversacion(conv.orden_id, auth(identidad))
+        : await chatApi.abrirConversacionPorId(conv.id, auth(identidad));
       setConvActiva({
         ...res.conversacion,
         prestador_nombre:    conv.prestador_nombre,
@@ -561,7 +564,7 @@ export default function ChatPage() {
           if (
             nuevoMensaje.sender_tipo !== (identidad.esAdmin ? 'admin' : identidad.clienteDni ? 'cliente' : 'prestador')
           ) {
-            chatService.marcarLeido(conversacionId, auth(identidad)).catch(() => {});
+            chatApi.marcarLeido(conversacionId, auth(identidad)).catch(() => {});
           }
         }
       )

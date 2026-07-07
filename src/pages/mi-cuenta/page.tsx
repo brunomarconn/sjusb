@@ -1,28 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginUsuario from '../usuarios/components/LoginUsuario';
 import RegistroUsuario from '../usuarios/components/RegistroUsuario';
 import PanelUsuario from '../usuarios/components/PanelUsuario';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 
 type Vista = 'login' | 'registro' | 'panel';
 
 export default function MiCuenta() {
   const navigate = useNavigate();
-  const [vista, setVista] = useState<Vista>('login');
-  const [clienteDni, setClienteDni] = useState<string | null>(null);
-
-  useEffect(() => {
-    const dniGuardado = localStorage.getItem('mservicios_cliente_dni');
-    if (dniGuardado) {
-      setClienteDni(dniGuardado);
-      setVista('panel');
-    }
-  }, []);
+  const clienteSession = useClienteSession();
+  const [vista, setVista] = useState<Vista>(clienteSession.dni ? 'panel' : 'login');
 
   function redirigirPostAuth() {
-    const pendingChat = localStorage.getItem('mservicios_pending_chat');
+    const pendingChat = clienteSession.getPendingChat();
     if (pendingChat) {
-      localStorage.removeItem('mservicios_pending_chat');
+      clienteSession.clearPendingChat();
       navigate(`/chat?prestador=${pendingChat}`);
       return;
     }
@@ -30,31 +23,24 @@ export default function MiCuenta() {
   }
 
   const handleLoginExitoso = (dni: string) => {
-    localStorage.removeItem('dniPrestador');
-    localStorage.removeItem('mservicios_prestador_id');
-    localStorage.setItem('mservicios_cliente_dni', dni);
-    setClienteDni(dni);
+    clienteSession.login(dni);
     redirigirPostAuth();
     setVista('panel');
   };
 
   const handleRegistroExitoso = (dni: string) => {
-    localStorage.removeItem('dniPrestador');
-    localStorage.removeItem('mservicios_prestador_id');
-    localStorage.setItem('mservicios_cliente_dni', dni);
-    setClienteDni(dni);
+    clienteSession.login(dni);
     redirigirPostAuth();
     setVista('panel');
   };
 
   const handleCerrarSesion = () => {
-    localStorage.removeItem('mservicios_cliente_dni');
-    setClienteDni(null);
+    clienteSession.logout();
     setVista('login');
   };
 
-  if (vista === 'panel' && clienteDni) {
-    return <PanelUsuario clienteDni={clienteDni} onCerrarSesion={handleCerrarSesion} />;
+  if (vista === 'panel' && clienteSession.dni) {
+    return <PanelUsuario clienteDni={clienteSession.dni} onCerrarSesion={handleCerrarSesion} />;
   }
 
   if (vista === 'registro') {

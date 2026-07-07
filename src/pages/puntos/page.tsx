@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import AppHeader from '../../components/AppHeader';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 
 interface Cliente {
   dni: string;
@@ -14,7 +15,7 @@ export default function Puntos() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  const clienteDni = localStorage.getItem('mservicios_cliente_dni');
+  const clienteDni = useClienteSession().dni;
 
   useEffect(() => {
     if (!clienteDni) {

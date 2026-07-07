@@ -5,9 +5,10 @@
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ordenesService } from '../../services/ordenesService';
+import { ordenesApi } from '../../api/ordenesApi';
 import type { OrdenConDetalle } from '../../types/ordenes';
 import { formatMonto } from '../../types/ordenes';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 
 const MOCK_MODE = import.meta.env.VITE_PAYMENT_MODE === 'mock';
 
@@ -24,13 +25,13 @@ export default function PagarPage() {
   const isMock = searchParams.get('mock') === '1';
   const prefId = searchParams.get('prefId');
 
-  const clienteDni = localStorage.getItem('mservicios_cliente_dni') ?? undefined;
+  const clienteDni = useClienteSession().dni ?? undefined;
 
   useEffect(() => {
     if (!id) return;
     // En modo mock intentamos cargar la orden
     // En prod esto nunca se usa, pero igual mostramos info si llegan
-    ordenesService
+    ordenesApi
       .obtenerOrden(id, { clienteDni })
       .then(setDatos)
       .catch(err => setError(err instanceof Error ? err.message : 'Error'))
@@ -42,7 +43,7 @@ export default function PagarPage() {
     if (!id) return;
     setProcesando(true);
     try {
-      await ordenesService.simularPago(id, aprobar ? 'approved' : 'rejected');
+      await ordenesApi.simularPago(id, aprobar ? 'approved' : 'rejected');
       // Redirigir como si fuera la pasarela real
       navigate(
         `/orden/${id}?pago=${aprobar ? 'exitoso' : 'error'}`,

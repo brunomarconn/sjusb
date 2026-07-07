@@ -57,7 +57,7 @@ async function apiFetch<T>(
 
 // ── API pública ────────────────────────────────────────────
 
-export const ordenesService = {
+export const ordenesApi = {
 
   /**
    * Obtiene una orden con eventos y liquidación.

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { ordenesService } from '../../services/ordenesService';
+import { ordenesApi } from '../../api/ordenesApi';
 import type { CrearOrdenInput } from '../../types/ordenes';
 
 interface Prestador {
@@ -63,7 +63,7 @@ export function ModalCrearOrden({ onClose, onCreada }: ModalCrearOrdenProps) {
 
     setCargando(true);
     try {
-      await ordenesService.crearOrden(form);
+      await ordenesApi.crearOrden(form);
       onCreada();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al crear la orden');

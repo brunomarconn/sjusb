@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { reservasService, comisionesService } from '../../services/reservasService';
+import { reservasApi } from '../../api/reservasApi';
+import { comisionesApi } from '../../api/comisionesApi';
 import type { Reserva, Comision } from '../../types/reservas';
 import {
   RESERVA_ESTADO_LABELS,
@@ -230,8 +231,8 @@ export default function ReservasAdmin() {
     setError('');
     try {
       const [rs, cs] = await Promise.all([
-        reservasService.listarTodas(),
-        comisionesService.listarTodas(),
+        reservasApi.listarTodas(),
+        comisionesApi.listarTodas(),
       ]);
       setReservas(rs);
       setComisiones(cs);
@@ -266,7 +267,7 @@ export default function ReservasAdmin() {
   async function procesarVencida(reservaId: string) {
     setProcesando(prev => new Set(prev).add(reservaId));
     try {
-      await reservasService.procesarVencida(reservaId);
+      await reservasApi.procesarVencida(reservaId);
       await cargar();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Error al procesar reserva');
@@ -286,37 +287,37 @@ export default function ReservasAdmin() {
   }
 
   async function confirmarCancelacion(reservaId: string) {
-    await reservasService.actualizarEstado(reservaId, 'cancelacion_confirmada_por_usuario');
+    await reservasApi.actualizarEstado(reservaId, 'cancelacion_confirmada_por_usuario');
     await cargar();
   }
 
   async function rechazarCancelacion(reservaId: string) {
-    await reservasService.actualizarEstado(reservaId, 'cancelacion_rechazada_por_usuario');
+    await reservasApi.actualizarEstado(reservaId, 'cancelacion_rechazada_por_usuario');
     await cargar();
   }
 
   async function marcarIncidenteReserva(reservaId: string) {
-    await reservasService.actualizarEstado(reservaId, 'incidente');
+    await reservasApi.actualizarEstado(reservaId, 'incidente');
     await cargar();
   }
 
   async function marcarComisionCopiada(comisionId: string) {
-    await comisionesService.marcarPendienteSiLinkGenerado(comisionId);
+    await comisionesApi.marcarPendienteSiLinkGenerado(comisionId);
     await cargar();
   }
 
   async function comisionPagada(comisionId: string) {
-    await comisionesService.marcarPagadaManual(comisionId);
+    await comisionesApi.marcarPagadaManual(comisionId);
     await cargar();
   }
 
   async function comisionIncidente(comisionId: string) {
-    await comisionesService.marcarIncidente(comisionId);
+    await comisionesApi.marcarIncidente(comisionId);
     await cargar();
   }
 
   async function comisionPendiente(comisionId: string) {
-    await comisionesService.actualizarEstado(comisionId, 'comision_pendiente');
+    await comisionesApi.actualizarEstado(comisionId, 'comision_pendiente');
     await cargar();
   }
 

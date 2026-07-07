@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { marcarReservado } from '../usuarios/page';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -71,6 +71,7 @@ function proximosDias(n: number): Date[] {
 export default function ReservarPage() {
   const { prestadorId } = useParams<{ prestadorId: string }>();
   const navigate = useNavigate();
+  const clienteSession = useClienteSession();
 
   const [prestador, setPrestador]         = useState<Prestador | null>(null);
   const [disponibilidad, setDisponibilidad] = useState<DisponibilidadSlot[]>([]);
@@ -231,7 +232,7 @@ Quería consultar si tenés disponibilidad para el día *${diaStr}* por la *${tu
       }
 
       // ── 3. Marcar como reservado (habilita valoración) ──
-      marcarReservado(prestador.id);
+      clienteSession.marcarReservado(prestador.id);
 
       // ── 4. Notificar por email en background (fire & forget) ──
       supabase.functions.invoke('enviar-reserva', {
