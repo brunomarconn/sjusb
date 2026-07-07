@@ -10,6 +10,7 @@ export function usePrestadorSession() {
   return {
     dniPrestador: ctx.dniPrestador,
     prestadorId: ctx.prestadorId,
+    token: ctx.prestadorToken,
     loginConDni: ctx.loginPrestador,
     setPrestadorId: ctx.setPrestadorId,
     logout: ctx.logoutPrestador,

@@ -10,7 +10,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import { corsPreflightResponse } from '../_shared/middlewares/cors.ts';
-import { resolverIdentidad, sinAutenticar } from '../_shared/middlewares/auth.ts';
+import { resolverIdentidadJwt, sinAutenticar } from '../_shared/middlewares/auth.ts';
 import { okResponse, errorResponse } from '../_shared/utils/responses.ts';
 import {
   obtenerPorConversacionId,
@@ -25,7 +25,7 @@ serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const identidad = resolverIdentidad(req);
+    const identidad = await resolverIdentidadJwt(req);
     if (sinAutenticar(identidad)) return errorResponse('Se requiere autenticación', 401);
 
     const ordenId = url.searchParams.get('orden_id');

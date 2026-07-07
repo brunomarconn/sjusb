@@ -8,7 +8,7 @@ import type {
   Mensaje,
 } from '../types/chat';
 
-export type Auth = { clienteDni?: string; prestadorId?: string; esAdmin?: boolean };
+export type Auth = { token?: string; esAdmin?: boolean };
 
 const SUPABASE_URL = import.meta.env.VITE_PUBLIC_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY as string;
@@ -32,8 +32,7 @@ function adminHeaders(): HeadersInit {
 
 function authHeaders(auth: Auth): HeadersInit {
   if (auth.esAdmin) return adminHeaders();
-  if (auth.clienteDni) return baseHeaders({ 'x-cliente-dni': auth.clienteDni });
-  if (auth.prestadorId) return baseHeaders({ 'x-prestador-id': auth.prestadorId });
+  if (auth.token) return baseHeaders({ authorization: `Bearer ${auth.token}` });
   throw new Error('Se requiere autenticación');
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import { authApi } from '../../../api/authApi';
+import { useClienteSession } from '../../../context/ClienteSessionContext';
 
 interface Cliente {
   dni: string;
@@ -15,26 +16,23 @@ interface PanelUsuarioProps {
 
 export default function PanelUsuario({ clienteDni, onCerrarSesion }: PanelUsuarioProps) {
   const navigate = useNavigate();
+  const clienteSession = useClienteSession();
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     cargarDatosCliente();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteDni]);
 
   const cargarDatosCliente = async () => {
     setCargando(true);
     setError('');
     try {
-      const { data, error: err } = await supabase
-        .from('clientes')
-        .select('dni, puntos, tiene_promocion')
-        .eq('dni', clienteDni)
-        .single();
-
-      if (err) throw err;
-      setCliente(data);
+      if (!clienteSession.token) throw new Error('Sin sesión');
+      const perfil = await authApi.obtenerPerfilCliente(clienteSession.token);
+      setCliente(perfil);
     } catch (e) {
       console.error('Error al cargar datos del cliente:', e);
       setError('Error al cargar tus datos');

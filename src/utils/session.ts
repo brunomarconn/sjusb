@@ -7,12 +7,31 @@
 
 const KEYS = {
   clienteDni: 'mservicios_cliente_dni',
+  clienteToken: 'mservicios_cliente_token',
   prestadorId: 'mservicios_prestador_id',
   dniPrestador: 'dniPrestador',
+  prestadorToken: 'mservicios_prestador_token',
   reservados: 'mservicios_reservados',
   pendingChat: 'mservicios_pending_chat',
   adminOk: 'mservicios_admin_ok',
 } as const;
+
+/** Decodifica el payload de un JWT (sin verificar firma — eso lo hace el servidor) */
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** true si el token no existe, está mal formado, o ya venció */
+export function tokenExpirado(token: string | null): boolean {
+  if (!token) return true;
+  const exp = decodeJwtExp(token);
+  return exp === null || Date.now() >= exp * 1000;
+}
 
 // ── Cliente ──────────────────────────────────────────────────
 
@@ -20,15 +39,22 @@ export function getClienteDni(): string | null {
   return localStorage.getItem(KEYS.clienteDni);
 }
 
+export function getClienteToken(): string | null {
+  return localStorage.getItem(KEYS.clienteToken);
+}
+
 /** Iniciar sesión como cliente cierra cualquier sesión de prestador activa */
-export function setClienteDni(dni: string): void {
+export function setClienteDni(dni: string, token: string): void {
   localStorage.removeItem(KEYS.dniPrestador);
   localStorage.removeItem(KEYS.prestadorId);
+  localStorage.removeItem(KEYS.prestadorToken);
   localStorage.setItem(KEYS.clienteDni, dni);
+  localStorage.setItem(KEYS.clienteToken, token);
 }
 
 export function clearClienteDni(): void {
   localStorage.removeItem(KEYS.clienteDni);
+  localStorage.removeItem(KEYS.clienteToken);
 }
 
 // ── Prestador ────────────────────────────────────────────────
@@ -41,10 +67,16 @@ export function getPrestadorId(): string | null {
   return localStorage.getItem(KEYS.prestadorId);
 }
 
+export function getPrestadorToken(): string | null {
+  return localStorage.getItem(KEYS.prestadorToken);
+}
+
 /** Iniciar sesión como prestador cierra cualquier sesión de cliente activa */
-export function setDniPrestador(dni: string): void {
+export function setDniPrestador(dni: string, token: string): void {
   localStorage.removeItem(KEYS.clienteDni);
+  localStorage.removeItem(KEYS.clienteToken);
   localStorage.setItem(KEYS.dniPrestador, dni);
+  localStorage.setItem(KEYS.prestadorToken, token);
 }
 
 export function setPrestadorId(id: string): void {
@@ -54,6 +86,7 @@ export function setPrestadorId(id: string): void {
 export function clearPrestadorSession(): void {
   localStorage.removeItem(KEYS.dniPrestador);
   localStorage.removeItem(KEYS.prestadorId);
+  localStorage.removeItem(KEYS.prestadorToken);
 }
 
 // ── Reservados (habilita "Valorar" para clientes) ─────────────

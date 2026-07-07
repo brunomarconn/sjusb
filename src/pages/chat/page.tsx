@@ -24,8 +24,10 @@ import { useAdminSession } from '../../context/AdminSessionContext';
 // ─────────────────────────────────────────────────────────────
 
 function useIdentidad() {
-  const clienteDni  = useClienteSession().dni ?? undefined;
-  const prestadorId = usePrestadorSession().prestadorId ?? undefined;
+  const clienteSession = useClienteSession();
+  const prestadorSession = usePrestadorSession();
+  const clienteDni  = clienteSession.dni ?? undefined;
+  const prestadorId = prestadorSession.prestadorId ?? undefined;
   const esAdmin     = useAdminSession().isAuthenticated;
   const tieneCliente = Boolean(clienteDni);
   const tienePrestador = Boolean(prestadorId);
@@ -38,6 +40,7 @@ function useIdentidad() {
   return {
     clienteDni: tipo === 'cliente' ? clienteDni : undefined,
     prestadorId: tipo === 'prestador' ? prestadorId : undefined,
+    token: tipo === 'cliente' ? clienteSession.token ?? undefined : tipo === 'prestador' ? prestadorSession.token ?? undefined : undefined,
     esAdmin,
     tipo,
   };
@@ -45,9 +48,8 @@ function useIdentidad() {
 
 function auth(identidad: ReturnType<typeof useIdentidad>) {
   return {
-    clienteDni:  identidad.clienteDni,
-    prestadorId: identidad.prestadorId,
-    esAdmin:     identidad.esAdmin,
+    token:  identidad.token,
+    esAdmin: identidad.esAdmin,
   };
 }
 

@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // Autenticación / autorización para Edge Functions
 // ─────────────────────────────────────────────────────────────
+import { verificarToken } from '../security/jwt.ts';
 
 /**
  * Valida que el header x-admin-secret coincida con la variable de entorno.
@@ -17,20 +18,30 @@ export interface Identidad {
   prestadorId: string | null;
 }
 
-/**
- * Resuelve la identidad del requester a partir de los headers
- * (x-admin-secret / x-cliente-dni / x-prestador-id). No lanza error
- * si no hay ninguna — el llamador decide si es obligatoria.
- */
-export function resolverIdentidad(req: Request): Identidad {
-  return {
-    esAdmin: validarAdminSecret(req),
-    clienteDni: req.headers.get('x-cliente-dni'),
-    prestadorId: req.headers.get('x-prestador-id'),
-  };
-}
-
 /** true si la identidad no tiene ningún rol reconocido */
 export function sinAutenticar(identidad: Identidad): boolean {
   return !identidad.esAdmin && !identidad.clienteDni && !identidad.prestadorId;
+}
+
+/**
+ * Resuelve la identidad a partir de un JWT verificado (Authorization: Bearer <token>)
+ * en vez de confiar en headers que el propio cliente podría falsificar
+ * (x-cliente-dni / x-prestador-id). Admin sigue usando x-admin-secret, sin cambios.
+ */
+export async function resolverIdentidadJwt(req: Request): Promise<Identidad> {
+  const esAdmin = validarAdminSecret(req);
+  if (esAdmin) return { esAdmin: true, clienteDni: null, prestadorId: null };
+
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { esAdmin: false, clienteDni: null, prestadorId: null };
+
+  const claims = await verificarToken(token);
+  if (!claims) return { esAdmin: false, clienteDni: null, prestadorId: null };
+
+  return {
+    esAdmin: false,
+    clienteDni: claims.rol === 'cliente' ? claims.sub : null,
+    prestadorId: claims.rol === 'prestador' ? (claims.prestador_id ?? null) : null,
+  };
 }

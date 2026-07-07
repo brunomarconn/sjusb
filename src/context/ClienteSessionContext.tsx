@@ -9,6 +9,7 @@ export function useClienteSession() {
   const ctx = useSessionContext();
   return {
     dni: ctx.clienteDni,
+    token: ctx.clienteToken,
     login: ctx.loginCliente,
     logout: ctx.logoutCliente,
     reservados: ctx.reservados,

@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import { authApi } from '../../../api/authApi';
+import { usePrestadorSession } from '../../../context/PrestadorSessionContext';
 
 interface LoginPrestadorProps {
-  onLoginExitoso: (dni: string) => void;
+  onLoginExitoso: (dni: string, token: string) => void;
   onIrRegistro: () => void;
 }
 
 export default function LoginPrestador({ onLoginExitoso, onIrRegistro }: LoginPrestadorProps) {
   const navigate = useNavigate();
+  const prestadorSession = usePrestadorSession();
   const [dni, setDni] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,24 +27,14 @@ export default function LoginPrestador({ onLoginExitoso, onIrRegistro }: LoginPr
     setLoading(true);
 
     try {
-      const { data: prestador, error: queryError } = await supabase
-        .from('prestadores')
-        .select('dni')
-        .eq('dni', dni.trim())
-        .maybeSingle();
-
-      if (queryError) throw queryError;
-
-      if (!prestador) {
-        setError('DNI no encontrado. ¿Querés registrarte?');
-        setLoading(false);
-        return;
-      }
-
-      onLoginExitoso(dni.trim());
+      const { token, dni: dniConfirmado, prestador_id } = await authApi.loginPrestador(dni.trim());
+      prestadorSession.setPrestadorId(prestador_id);
+      onLoginExitoso(dniConfirmado, token);
     } catch (err) {
       console.error('Error al iniciar sesión:', err);
-      setError('Error al iniciar sesión. Intentá nuevamente.');
+      setError(err instanceof Error && /no encontrado/i.test(err.message)
+        ? 'DNI no encontrado. ¿Querés registrarte?'
+        : 'Error al iniciar sesión. Intentá nuevamente.');
     } finally {
       setLoading(false);
     }

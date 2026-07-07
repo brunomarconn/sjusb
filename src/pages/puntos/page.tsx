@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { authApi } from '../../api/authApi';
 import AppHeader from '../../components/AppHeader';
 import { useClienteSession } from '../../context/ClienteSessionContext';
 
@@ -15,26 +15,24 @@ export default function Puntos() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  const clienteDni = useClienteSession().dni;
+  const clienteSession = useClienteSession();
+  const clienteDni = clienteSession.dni;
 
   useEffect(() => {
-    if (!clienteDni) {
+    if (!clienteDni || !clienteSession.token) {
       navigate('/mi-cuenta');
       return;
     }
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cargarDatos = async () => {
-    if (!clienteDni) return;
+    if (!clienteDni || !clienteSession.token) return;
     setCargando(true);
     try {
-      const { data } = await supabase
-        .from('clientes')
-        .select('dni, puntos, tiene_promocion')
-        .eq('dni', clienteDni)
-        .maybeSingle();
-      if (data) setCliente(data);
+      const perfil = await authApi.obtenerPerfilCliente(clienteSession.token);
+      setCliente(perfil);
     } catch (_) {
       setCliente({ dni: clienteDni, puntos: 0, tiene_promocion: false });
     } finally {

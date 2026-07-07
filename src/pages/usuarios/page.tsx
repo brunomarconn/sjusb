@@ -4,6 +4,7 @@ import Fuse from 'fuse.js';
 import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
 import AppHeader from '../../components/AppHeader';
+import { authApi } from '../../api/authApi';
 import { useClienteSession } from '../../context/ClienteSessionContext';
 import { CATEGORIAS_FILTRO_USUARIOS } from '../../constants/categorias';
 import { SINONIMOS_PROFESIONES } from '../../constants/sinonimos';
@@ -207,10 +208,10 @@ export default function Usuarios() {
   };
 
   const cargarPuntosUsuario = async () => {
-    if (!clienteDni) return;
+    if (!clienteDni || !clienteSession.token) return;
     try {
-      const { data } = await supabase.from('clientes').select('puntos').eq('dni', clienteDni).maybeSingle();
-      if (data) setPuntosUsuario(data.puntos);
+      const perfil = await authApi.obtenerPerfilCliente(clienteSession.token);
+      setPuntosUsuario(perfil.puntos);
     } catch (e) {
       console.error('Error al cargar puntos:', e);
     }

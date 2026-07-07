@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import { authApi } from '../../../api/authApi';
 
 interface RegistroUsuarioProps {
-  onRegistroExitoso: (dni: string) => void;
+  onRegistroExitoso: (dni: string, token: string) => void;
   onCambiarALogin: () => void;
 }
 
@@ -48,38 +48,18 @@ export default function RegistroUsuario({ onRegistroExitoso, onCambiarALogin }: 
     setCargando(true);
 
     try {
-      const { data: existente } = await supabase
-        .from('clientes')
-        .select('dni')
-        .eq('dni', dniLimpio)
-        .maybeSingle();
-
-      if (existente) {
-        setError('Este DNI ya está registrado. Iniciá sesión.');
-        setCargando(false);
-        return;
-      }
-
-      const payload = {
+      const { token, dni: dniRegistrado } = await authApi.registrarCliente({
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         dni: dniLimpio,
         telefono: telefonoLimpio,
-        password: dniLimpio,
-        puntos: 0,
-        tiene_promocion: false,
-      };
-
-      const { error: insertError } = await supabase
-        .from('clientes')
-        .insert([payload]);
-
-      if (insertError) throw insertError;
-
-      onRegistroExitoso(dniLimpio);
+      });
+      onRegistroExitoso(dniRegistrado, token);
     } catch (e) {
       console.error('Error al registrar:', e);
-      setError('Error al crear la cuenta. Intentá nuevamente.');
+      setError(e instanceof Error && /ya está registrado/i.test(e.message)
+        ? 'Este DNI ya está registrado. Iniciá sesión.'
+        : 'Error al crear la cuenta. Intentá nuevamente.');
     } finally {
       setCargando(false);
     }

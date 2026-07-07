@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import { authApi } from '../../../api/authApi';
 
 interface LoginUsuarioProps {
-  onLoginExitoso: (dni: string) => void;
+  onLoginExitoso: (dni: string, token: string) => void;
   onCambiarARegistro: () => void;
 }
 
@@ -29,35 +29,16 @@ export default function LoginUsuario({ onLoginExitoso, onCambiarARegistro }: Log
       return;
     }
 
-    const password = dniLimpio;
-
     setCargando(true);
 
     try {
-      const { data, error: err } = await supabase
-        .from('clientes')
-        .select('dni, password, puntos, tiene_promocion')
-        .eq('dni', dniLimpio)
-        .maybeSingle();
-
-      if (err) throw err;
-
-      if (!data) {
-        setError('DNI no registrado. ¿Querés crear una cuenta?');
-        setCargando(false);
-        return;
-      }
-
-      if (data.password && data.password !== password) {
-        setError('No pudimos ingresar con ese DNI');
-        setCargando(false);
-        return;
-      }
-
-      onLoginExitoso(data.dni);
+      const { token, dni: dniConfirmado } = await authApi.loginCliente(dniLimpio);
+      onLoginExitoso(dniConfirmado, token);
     } catch (e) {
       console.error('Error al iniciar sesión:', e);
-      setError('Error al iniciar sesión. Intentá nuevamente.');
+      setError(e instanceof Error && /credenciales|dni no registrado/i.test(e.message)
+        ? 'DNI no registrado. ¿Querés crear una cuenta?'
+        : 'Error al iniciar sesión. Intentá nuevamente.');
     } finally {
       setCargando(false);
     }

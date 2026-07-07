@@ -22,14 +22,14 @@ export default function MiCuenta() {
     // Sin pendiente: quedarse en el panel (no redirigir)
   }
 
-  const handleLoginExitoso = (dni: string) => {
-    clienteSession.login(dni);
+  const handleLoginExitoso = (dni: string, token: string) => {
+    clienteSession.login(dni, token);
     redirigirPostAuth();
     setVista('panel');
   };
 
-  const handleRegistroExitoso = (dni: string) => {
-    clienteSession.login(dni);
+  const handleRegistroExitoso = (dni: string, token: string) => {
+    clienteSession.login(dni, token);
     redirigirPostAuth();
     setVista('panel');
   };

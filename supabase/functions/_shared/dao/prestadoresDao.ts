@@ -44,6 +44,22 @@ export async function obtenerResumen(db: SupabaseClient, id: string) {
   return data as { id: string; nombre: string; apellido: string; categoria: string } | null;
 }
 
+/** Proyección con password, usada por auth-login */
+export async function obtenerPorDniConPassword(db: SupabaseClient, dni: string) {
+  const { data, error } = await db
+    .from('prestadores')
+    .select('id, dni, password')
+    .eq('dni', dni)
+    .maybeSingle();
+  if (error) throw error;
+  return data as { id: string; dni: string; password: string } | null;
+}
+
+export async function actualizarPassword(db: SupabaseClient, id: string, hash: string) {
+  const { error } = await db.from('prestadores').update({ password: hash }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function eliminar(db: SupabaseClient, id: string) {
   const { data, error } = await db
     .from('prestadores')

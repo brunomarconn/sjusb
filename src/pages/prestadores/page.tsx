@@ -10,13 +10,8 @@ export default function PrestadoresPage() {
     prestadorSession.dniPrestador ? 'panel' : 'login'
   );
 
-  const handleLoginExitoso = (dni: string) => {
-    prestadorSession.loginConDni(dni);
-    setVista('panel');
-  };
-
-  const handleRegistroExitoso = (dni: string) => {
-    prestadorSession.loginConDni(dni);
+  const handleLoginExitoso = (dni: string, token: string) => {
+    prestadorSession.loginConDni(dni, token);
     setVista('panel');
   };
 
