@@ -224,6 +224,7 @@ export default function ReservasAdmin() {
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [cargando, setCargando] = useState(false);
   const [procesando, setProcesando] = useState<Set<string>>(new Set());
+  const [procesandoTodas, setProcesandoTodas] = useState(false);
   const [error, setError] = useState('');
 
   const cargar = useCallback(async () => {
@@ -281,8 +282,18 @@ export default function ReservasAdmin() {
   }
 
   async function procesarTodas() {
-    for (const r of vencidas) {
-      await procesarVencida(r.id);
+    setProcesandoTodas(true);
+    try {
+      const resultado = await reservasApi.procesarTodasVencidas();
+      if (resultado.errores.length > 0) {
+        alert(`Se procesaron ${resultado.procesadas.length} reserva(s). ${resultado.errores.length} fallaron:\n` +
+          resultado.errores.map(e => `- ${e.reserva_id}: ${e.mensaje}`).join('\n'));
+      }
+      await cargar();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al procesar reservas');
+    } finally {
+      setProcesandoTodas(false);
     }
   }
 
@@ -403,10 +414,10 @@ export default function ReservasAdmin() {
                   </p>
                   <button
                     onClick={procesarTodas}
-                    disabled={procesando.size > 0}
+                    disabled={procesandoTodas}
                     className="px-4 py-2 bg-[#e2b040] text-[#1a1a2e] rounded-lg text-sm font-bold hover:bg-[#f0d080] transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    {procesando.size > 0 ? (
+                    {procesandoTodas ? (
                       <span className="flex items-center gap-2"><i className="ri-loader-4-line animate-spin" />Procesando...</span>
                     ) : 'Procesar todas'}
                   </button>

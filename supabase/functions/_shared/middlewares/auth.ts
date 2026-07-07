@@ -12,6 +12,17 @@ export function validarAdminSecret(req: Request): boolean {
   return Boolean(secret && expected && secret === expected);
 }
 
+/**
+ * Valida que el header x-cron-secret coincida con la variable de entorno.
+ * Usado por el cron de Postgres para llamar a funciones internas
+ * (secreto separado de ADMIN_SECRET, rotable de forma independiente).
+ */
+export function validarCronSecret(req: Request): boolean {
+  const secret = req.headers.get('x-cron-secret');
+  const expected = Deno.env.get('CRON_SECRET') || '';
+  return Boolean(secret && expected && secret === expected);
+}
+
 export interface Identidad {
   esAdmin: boolean;
   clienteDni: string | null;

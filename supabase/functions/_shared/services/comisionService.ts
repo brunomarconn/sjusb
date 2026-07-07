@@ -117,6 +117,34 @@ export async function procesarVencida(db: SupabaseClient, reservaId: string) {
   return { comision: comisionFinal, mensaje_wa: mensajeWA };
 }
 
+export interface ResultadoBatch {
+  procesadas: string[];
+  errores: { reserva_id: string; mensaje: string }[];
+}
+
+/**
+ * Detecta todas las reservas vencidas y las procesa en paralelo.
+ * La usa tanto el botón "Procesar todas" del admin como el cron automático.
+ */
+export async function procesarTodasVencidas(db: SupabaseClient): Promise<ResultadoBatch> {
+  const ids = await reservasDao.listarVencidas(db);
+
+  const resultados = await Promise.allSettled(ids.map((id) => procesarVencida(db, id)));
+
+  const procesadas: string[] = [];
+  const errores: { reserva_id: string; mensaje: string }[] = [];
+
+  resultados.forEach((resultado, i) => {
+    if (resultado.status === 'fulfilled') {
+      procesadas.push(ids[i]);
+    } else {
+      errores.push({ reserva_id: ids[i], mensaje: String(resultado.reason) });
+    }
+  });
+
+  return { procesadas, errores };
+}
+
 /** Procesa una notificación de webhook de MercadoPago y marca la comisión como pagada */
 export async function procesarWebhookPago(db: SupabaseClient, body: unknown) {
   const payload = body as { type?: string };

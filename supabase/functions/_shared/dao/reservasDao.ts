@@ -3,6 +3,17 @@
 // ─────────────────────────────────────────────────────────────
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+export async function listarVencidas(db: SupabaseClient) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data, error } = await db
+    .from('reservas')
+    .select('id')
+    .eq('estado', 'reserva_activa')
+    .lt('dia', hoy);
+  if (error) throw error;
+  return (data ?? []).map((r: { id: string }) => r.id);
+}
+
 export async function obtenerConPrestador(db: SupabaseClient, id: string) {
   const { data, error } = await db
     .from('reservas')

@@ -398,6 +398,9 @@ verify_jwt = false
 [functions.chat-obtener]
 verify_jwt = false
 
+[functions.procesar-comisiones-automatico]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

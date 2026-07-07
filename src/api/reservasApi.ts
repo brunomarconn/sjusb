@@ -78,4 +78,10 @@ export const reservasApi = {
   async procesarVencida(reservaId: string): Promise<{ comision: Comision }> {
     return callEdgeFn<{ comision: Comision }>('procesar-comision', { reserva_id: reservaId });
   },
+
+  // Procesa TODAS las reservas vencidas en un solo llamado (en paralelo
+  // en el backend). El mismo cron diario automático usa esta función.
+  async procesarTodasVencidas(): Promise<{ procesadas: string[]; errores: { reserva_id: string; mensaje: string }[] }> {
+    return callEdgeFn('procesar-comisiones-automatico', {});
+  },
 };
