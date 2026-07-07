@@ -85,21 +85,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Error inesperado';
 }
 
-function isMissingColumnError(error: unknown, columns: string[]): boolean {
-  const message = getErrorMessage(error).toLowerCase();
-  return columns.some((column) => message.includes(column.toLowerCase()))
-    && (message.includes('schema cache') || message.includes('could not find') || message.includes('does not exist'));
-}
-
-function omitColumns<T extends Record<string, unknown>>(payload: T, columns: string[]): Partial<T> {
-  const cleaned = { ...payload };
-  for (const column of columns) {
-    delete cleaned[column];
-  }
-  return cleaned;
-}
-
-const ADMIN_ONLY_COLUMNS = ['enabled', 'trabajos_completados'];
 const CATEGORIA_CUSTOM = '__custom__';
 const CATEGORIAS_EXTRA_KEY = 'serviciosya_admin_categorias_extra';
 const PRESTADORES_BASE_SELECT =
@@ -140,35 +125,30 @@ function saveCategoriasExtra(categorias: string[]) {
   localStorage.setItem(CATEGORIAS_EXTRA_KEY, JSON.stringify(categorias));
 }
 
-async function insertPrestador(payload: Record<string, unknown>) {
-  const result = await supabase.from('prestadores').insert([payload]);
-  if (!result.error) return;
+async function callAdminApi(action: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!ADMIN_SECRET) throw new Error('VITE_ADMIN_SECRET no configurada');
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/admin-prestador`, {
+    method: 'POST',
+    headers: {
+      apikey: ANON_KEY,
+      authorization: `Bearer ${ANON_KEY}`,
+      'content-type': 'application/json',
+      'x-admin-secret': ADMIN_SECRET,
+    },
+    body: JSON.stringify({ action, ...data }),
+  });
+  const result = await resp.json().catch(() => null);
+  if (!resp.ok) throw new Error(result?.error || result?.details || `Error ${resp.status}`);
+  return result as Record<string, unknown>;
+}
 
-  if (isMissingColumnError(result.error, ADMIN_ONLY_COLUMNS)) {
-    const fallback = await supabase
-      .from('prestadores')
-      .insert([omitColumns(payload, ADMIN_ONLY_COLUMNS)]);
-    if (!fallback.error) return;
-    throw fallback.error;
-  }
-
-  throw result.error;
+async function insertPrestador(payload: Record<string, unknown>): Promise<string> {
+  const result = await callAdminApi('crear', { payload });
+  return result.id as string;
 }
 
 async function updatePrestador(id: string, payload: Record<string, unknown>) {
-  const result = await supabase.from('prestadores').update(payload).eq('id', id);
-  if (!result.error) return;
-
-  if (isMissingColumnError(result.error, ADMIN_ONLY_COLUMNS)) {
-    const fallback = await supabase
-      .from('prestadores')
-      .update(omitColumns(payload, ADMIN_ONLY_COLUMNS))
-      .eq('id', id);
-    if (!fallback.error) return;
-    throw fallback.error;
-  }
-
-  throw result.error;
+  await callAdminApi('actualizar', { id, payload });
 }
 
 async function deletePrestadorCompleto(prestadorId: string) {
@@ -365,16 +345,13 @@ export default function PrestadoresAdmin() {
   const guardarDisponibilidad = async (prestadorId: string) => {
     setGuardandoDisp(true);
     try {
-      await supabase.from('disponibilidad_prestadores').delete().eq('prestador_id', prestadorId);
-      const inserts: { prestador_id: string; dia_semana: number; turno: Turno }[] = [];
+      const entradas: { prestador_id: string; dia_semana: number; turno: string }[] = [];
       for (const [dia, turnos] of Object.entries(disponibilidad)) {
         for (const turno of turnos) {
-          inserts.push({ prestador_id: prestadorId, dia_semana: Number(dia), turno });
+          entradas.push({ prestador_id: prestadorId, dia_semana: Number(dia), turno });
         }
       }
-      if (inserts.length > 0) {
-        await supabase.from('disponibilidad_prestadores').insert(inserts);
-      }
+      await callAdminApi('gestionar_disponibilidad', { prestador_id: prestadorId, entradas });
       setDispGuardada(true);
       setTimeout(() => setDispGuardada(false), 3000);
       showToast('Disponibilidad guardada ✓');
@@ -610,23 +587,7 @@ export default function PrestadoresAdmin() {
       } else {
         const password = form.dni.trim();
         await insertPrestador({ ...payload, password });
-
-        // Obtener el id del prestador recién creado
-        const { data: nuevoPrestador } = await supabase
-          .from('prestadores')
-          .select('id')
-          .eq('dni', form.dni.trim())
-          .maybeSingle();
-
-        if (nuevoPrestador?.id) {
-          // Disponibilidad por defecto: lunes a viernes, mañana y tarde
-          const dispDefecto: { prestador_id: string; dia_semana: number; turno: string }[] = [];
-          for (const dia of [1, 2, 3, 4, 5]) {
-            dispDefecto.push({ prestador_id: nuevoPrestador.id, dia_semana: dia, turno: 'mañana' });
-            dispDefecto.push({ prestador_id: nuevoPrestador.id, dia_semana: dia, turno: 'tarde' });
-          }
-          await supabase.from('disponibilidad_prestadores').insert(dispDefecto);
-        }
+        // La Edge Function crea la disponibilidad por defecto (L-V, mañana y tarde)
 
         showToast('Prestador creado correctamente ✓');
       }
@@ -657,14 +618,8 @@ export default function PrestadoresAdmin() {
         if (modalVals?.id === prestador.id) setModalVals(null);
       } else {
         const nuevoEstado = tipo === 'activar';
-        const { error: err } = await supabase.from('prestadores').update({ enabled: nuevoEstado }).eq('id', prestador.id);
-        if (isMissingColumnError(err, ['enabled'])) {
-          showToast('La tabla prestadores no tiene la columna enabled. Ejecutá la migración de campos admin.', false);
-        } else if (err) {
-          throw err;
-        } else {
-          showToast(nuevoEstado ? 'Prestador reactivado ✓' : 'Prestador pausado');
-        }
+        await callAdminApi('cambiar_estado', { id: prestador.id, enabled: nuevoEstado });
+        showToast(nuevoEstado ? 'Prestador reactivado ✓' : 'Prestador pausado');
       }
       setConfirmModal(null);
       await cargar();
@@ -682,14 +637,12 @@ export default function PrestadoresAdmin() {
     }
     setEnviandoVal(true);
     try {
-      const { error: err } = await supabase.from('valoraciones').insert([{
+      await callAdminApi('agregar_valoracion', {
         prestador_id: prestadorId,
-        cliente_email: 'admin@mrsservicios.com',
         nombre_cliente: nuevaVal.nombre.trim(),
         puntuacion: nuevaVal.puntuacion,
         comentario: nuevaVal.comentario.trim(),
-      }]);
-      if (err) throw err;
+      });
       showToast('Valoración agregada ✓');
       setNuevaVal({ nombre: '', puntuacion: 5, comentario: '' });
       const updatedPrestadores = await obtenerPrestadoresConValoraciones();
