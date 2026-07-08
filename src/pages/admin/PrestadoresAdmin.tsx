@@ -86,7 +86,6 @@ function getErrorMessage(error: unknown): string {
 }
 
 const CATEGORIA_CUSTOM = '__custom__';
-const CATEGORIAS_EXTRA_KEY = 'serviciosya_admin_categorias_extra';
 const PRESTADORES_BASE_SELECT =
   'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at';
 
@@ -109,20 +108,6 @@ function mergeCategorias(...listas: string[][]): string[] {
   }
 
   return merged;
-}
-
-function loadCategoriasExtra(): string[] {
-  try {
-    const raw = localStorage.getItem(CATEGORIAS_EXTRA_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCategoriasExtra(categorias: string[]) {
-  localStorage.setItem(CATEGORIAS_EXTRA_KEY, JSON.stringify(categorias));
 }
 
 async function callAdminApi(action: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -200,9 +185,7 @@ export default function PrestadoresAdmin() {
   const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
   const [guardandoDisp, setGuardandoDisp] = useState(false);
   const [dispGuardada, setDispGuardada] = useState(false);
-  const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>(() =>
-    mergeCategorias(CATEGORIAS, loadCategoriasExtra())
-  );
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>(() => [...CATEGORIAS]);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState('');
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
@@ -365,17 +348,7 @@ export default function PrestadoresAdmin() {
   const registrarCategoriaSiEsNueva = (categoria: string) => {
     const clean = categoria.trim();
     if (!clean) return;
-
-    setCategoriasDisponibles((actuales) => {
-      const next = mergeCategorias(actuales, [clean]);
-      if (next.length === actuales.length) return actuales;
-
-      const extras = next.filter((cat) =>
-        !CATEGORIAS.some((base) => normalizeCategoria(base) === normalizeCategoria(cat))
-      );
-      saveCategoriasExtra(extras);
-      return next;
-    });
+    setCategoriasDisponibles((actuales) => mergeCategorias(actuales, [clean]));
   };
 
   const toggleZona = (zona: string) => {
