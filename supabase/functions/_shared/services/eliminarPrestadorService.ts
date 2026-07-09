@@ -4,8 +4,6 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as prestadoresDao from '../dao/prestadoresDao.ts';
 import * as valoracionesDao from '../dao/valoracionesDao.ts';
-import * as reservasDao from '../dao/reservasDao.ts';
-import * as disponibilidadDao from '../dao/disponibilidadDao.ts';
 import * as conversacionesDao from '../dao/conversacionesDao.ts';
 import * as ordenesDao from '../dao/ordenesDao.ts';
 import * as ordenEventosDao from '../dao/ordenEventosDao.ts';
@@ -14,6 +12,10 @@ import { isMissingTableError } from '../utils/errors.ts';
 export class PrestadorNoEncontradoError extends Error {}
 export class EliminacionFallidaError extends Error {}
 
+// trabajos/membresias/sanciones_prestadores tienen FK ON DELETE CASCADE
+// desde su creación, así que no necesitan un borrado manual acá
+// (a diferencia de reservas, que necesitó una migración de cascade
+// después de creada — ver 20260429000000_prestadores_delete_cascade.sql).
 export async function eliminarPrestador(db: SupabaseClient, prestadorId: string) {
   const prestador = await prestadoresDao.obtenerPorId(db, prestadorId);
   if (!prestador) throw new PrestadorNoEncontradoError('Prestador no encontrado');
@@ -22,8 +24,6 @@ export async function eliminarPrestador(db: SupabaseClient, prestadorId: string)
 
   const relatedDeletes = [
     valoracionesDao.eliminarPorPrestador(db, prestadorId),
-    reservasDao.eliminarPorPrestador(db, prestadorId),
-    disponibilidadDao.eliminarPorPrestador(db, prestadorId),
     conversacionesDao.eliminarPorPrestador(db, prestadorId),
   ];
 

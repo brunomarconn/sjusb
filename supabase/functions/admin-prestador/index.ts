@@ -49,13 +49,90 @@ serve(async (req: Request) => {
       return okResponse({ ok: true });
     }
 
-    if (action === 'gestionar_disponibilidad') {
-      if (!body.prestador_id) return errorResponse('prestador_id es requerido');
-      await prestadorAdminService.gestionarDisponibilidad(db, {
-        prestador_id: body.prestador_id,
-        entradas: body.entradas,
+    if (action === 'cambiar_visibilidad') {
+      if (!body.id || !body.visibility_status) return errorResponse('id y visibility_status son requeridos');
+      await prestadorAdminService.cambiarVisibilidad(db, {
+        id: body.id,
+        visibility_status: body.visibility_status,
       });
       return okResponse({ ok: true });
+    }
+
+    if (action === 'cambiar_verificacion') {
+      if (!body.id || !body.verification_status) return errorResponse('id y verification_status son requeridos');
+      await prestadorAdminService.cambiarVerificacion(db, {
+        id: body.id,
+        verification_status: body.verification_status,
+      });
+      return okResponse({ ok: true });
+    }
+
+    if (action === 'cambiar_plan') {
+      if (!body.id) return errorResponse('id es requerido');
+      await prestadorAdminService.cambiarPlan(db, {
+        id: body.id,
+        plan_phase: body.plan_phase,
+        membership_status: body.membership_status,
+        monthly_price: body.monthly_price,
+        discount_rate: body.discount_rate,
+      });
+      return okResponse({ ok: true });
+    }
+
+    if (action === 'marcar_destacado') {
+      if (!body.id) return errorResponse('id es requerido');
+      await prestadorAdminService.marcarDestacado(db, {
+        id: body.id,
+        is_featured: body.is_featured,
+        is_top: body.is_top,
+      });
+      return okResponse({ ok: true });
+    }
+
+    if (action === 'listar_valoraciones') {
+      const valoraciones = await prestadorAdminService.listarValoraciones(db, {
+        prestador_id: body.prestador_id,
+        is_visible: body.is_visible,
+      });
+      return okResponse({ valoraciones });
+    }
+
+    if (action === 'moderar_valoracion') {
+      if (!body.id) return errorResponse('id es requerido');
+      await prestadorAdminService.moderarValoracion(db, {
+        id: body.id,
+        is_visible: body.is_visible,
+        admin_approved: body.admin_approved,
+      });
+      return okResponse({ ok: true });
+    }
+
+    if (action === 'crear_sancion') {
+      if (!body.prestador_id || !body.tipo) return errorResponse('prestador_id y tipo son requeridos');
+      const sancion = await prestadorAdminService.crearSancion(db, {
+        prestador_id: body.prestador_id,
+        tipo: body.tipo,
+        reason: body.reason,
+        related_trabajo_id: body.related_trabajo_id,
+      });
+      return okResponse({ sancion });
+    }
+
+    if (action === 'listar_sanciones') {
+      if (!body.prestador_id) return errorResponse('prestador_id es requerido');
+      const sanciones = await prestadorAdminService.listarSanciones(db, body.prestador_id);
+      return okResponse({ sanciones });
+    }
+
+    if (action === 'resolver_sancion') {
+      if (!body.id || !body.prestador_id) return errorResponse('id y prestador_id son requeridos');
+      await prestadorAdminService.resolverSancion(db, body.id, body.prestador_id, body.admin_notes);
+      return okResponse({ ok: true });
+    }
+
+    if (action === 'recalcular_ranking') {
+      const resultado = await prestadorAdminService.recalcularRanking(db);
+      return okResponse(resultado);
     }
 
     return errorResponse('Acción no reconocida');

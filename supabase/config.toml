@@ -371,12 +371,6 @@ deno_version = 2
 [functions.eliminar-prestador]
 verify_jwt = false
 
-[functions.procesar-comision]
-verify_jwt = false
-
-[functions.mp-webhook-comision]
-verify_jwt = false
-
 [functions.auth-registro]
 verify_jwt = false
 
@@ -398,7 +392,31 @@ verify_jwt = false
 [functions.chat-obtener]
 verify_jwt = false
 
-[functions.procesar-comisiones-automatico]
+[functions.crear-lead]
+verify_jwt = false
+
+[functions.obtener-trabajo]
+verify_jwt = false
+
+[functions.actualizar-estado-trabajo]
+verify_jwt = false
+
+[functions.crear-resena]
+verify_jwt = false
+
+[functions.panel-prestador]
+verify_jwt = false
+
+[functions.admin-trabajos]
+verify_jwt = false
+
+[functions.admin-membresias]
+verify_jwt = false
+
+[functions.admin-config]
+verify_jwt = false
+
+[functions.admin-dashboard]
 verify_jwt = false
 
 [analytics]

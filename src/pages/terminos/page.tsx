@@ -15,7 +15,7 @@ const secciones = [
   },
   {
     titulo: '3. Objeto del servicio',
-    contenido: `MrServicios actúa como intermediario digital que conecta a usuarios con prestadores de servicios verificados. El sitio permite buscar categorías de servicios, revisar perfiles de prestadores, contactarlos mediante WhatsApp y dejar valoraciones sobre la calidad del servicio. La plataforma no presta los servicios ofrecidos por los prestadores ni participa de la relación contractual entre ambas partes.`,
+    contenido: `MrServicios actúa como intermediario digital que conecta a usuarios con prestadores de servicios. El sitio permite buscar categorías de servicios, revisar perfiles de prestadores (incluyendo referencias y, cuando corresponda, verificación de identidad), contactarlos mediante WhatsApp y dejar valoraciones sobre la calidad del servicio. La plataforma no presta los servicios ofrecidos por los prestadores ni participa de la relación contractual entre ambas partes.`,
   },
   {
     titulo: '4. Registro y cuentas',
@@ -46,8 +46,8 @@ Responsabilidad de la plataforma: MrServicios no se responsabiliza por daños di
 Exclusión de garantías: el sitio se ofrece "tal como está" y "según disponibilidad". MrServicios no garantiza la ausencia de errores o interrupciones.`,
   },
   {
-    titulo: '7. Gestión de pagos y cobros',
-    contenido: `En caso de que la plataforma habilite la gestión de pagos, los cobros se realizarán a través de proveedores externos. La plataforma podrá retener comisiones o tarifas por el uso del servicio. Los detalles de tarifas, comisiones, plazos de pago y reembolsos se establecerán en una Política de Pagos independiente.`,
+    titulo: '7. Membresía de prestadores',
+    contenido: `El uso de la plataforma es siempre gratuito para los usuarios. Los prestadores acceden gratis mientras están en etapa de prueba; una vez que reciben una cantidad mínima de contactos reales, MrServicios puede proponerles una membresía mensual para seguir apareciendo activos y visibles en el listado. La membresía no se cobra por trabajo realizado, sino como cuota periódica, y sus condiciones (monto, descuentos, medios de pago) se comunican directamente al prestador antes de activarse.`,
   },
   {
     titulo: '8. Política de cancelaciones y reembolsos',

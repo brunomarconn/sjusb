@@ -12,8 +12,10 @@ const Puntos = lazy(() => import('../pages/puntos/page'));
 const Admin = lazy(() => import('../pages/admin/page'));
 // Chat interno
 const Chat = lazy(() => import('../pages/chat/page'));
-// Reservas
-const Reservar = lazy(() => import('../pages/reservar/page'));
+// Modelo de leads: trabajo por token, panel del prestador por token, reseña por token
+const Trabajo = lazy(() => import('../pages/trabajo/page'));
+const PanelPrestadorToken = lazy(() => import('../pages/p/page'));
+const Resena = lazy(() => import('../pages/resena/page'));
 /* The NotFound component lives directly in the pages folder */
 const NotFound = lazy(() => import('../pages/NotFound'));
 const FAQ = lazy(() => import('../pages/faq/page'));
@@ -55,8 +57,16 @@ const routes: RouteObject[] = [
     element: <Chat />,
   },
   {
-    path: '/reservar/:prestadorId',
-    element: <Reservar />,
+    path: '/trabajo/:token',
+    element: <Trabajo />,
+  },
+  {
+    path: '/p/:providerToken',
+    element: <PanelPrestadorToken />,
+  },
+  {
+    path: '/resena/:token',
+    element: <Resena />,
   },
   {
     path: '/faq',

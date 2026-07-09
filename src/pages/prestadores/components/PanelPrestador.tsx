@@ -1,142 +1,87 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, type Prestador, type Valoracion } from '../../../lib/supabase';
-import { reservasApi } from '../../../api/reservasApi';
-import { comisionesApi } from '../../../api/comisionesApi';
+import { supabase } from '../../../lib/supabase';
+import { panelPrestadorApi, type PanelPrestadorData } from '../../../api/panelPrestadorApi';
+import { leadsApi } from '../../../api/leadsApi';
 import { usePrestadorSession } from '../../../context/PrestadorSessionContext';
-import type { Reserva, Comision } from '../../../types/reservas';
-import {
-  RESERVA_ESTADO_LABELS,
-  COMISION_ESTADO_LABELS,
-  COMISION_ESTADO_COLORS,
-  formatFechaReserva,
-} from '../../../types/reservas';
+import TrabajoEstadoButtons from '../../trabajo/components/TrabajoEstadoButtons';
+import type { Trabajo, TrabajoEstado } from '../../../types/trabajo';
+import { TRABAJO_ESTADO_LABELS, TRABAJO_ESTADO_COLORS, formatFechaTrabajo } from '../../../types/trabajo';
+import { MEMBRESIA_ESTADO_LABELS, MEMBRESIA_ESTADO_COLORS } from '../../../types/membresia';
+import { VERIFICATION_LABELS, PLAN_PHASE_LABELS, MEMBERSHIP_STATUS_LABELS } from '../../../types/prestador';
 
-// ── Tipos disponibilidad ──────────────────────────────────────
-type Turno = 'mañana' | 'tarde';
-type DisponibilidadMap = Record<number, Turno[]>;
-
-const DIAS_SEMANA = [
-  { valor: 1, nombre: 'Lunes' },
-  { valor: 2, nombre: 'Martes' },
-  { valor: 3, nombre: 'Miércoles' },
-  { valor: 4, nombre: 'Jueves' },
-  { valor: 5, nombre: 'Viernes' },
-  { valor: 6, nombre: 'Sábado' },
-  { valor: 0, nombre: 'Domingo' },
-];
+interface Valoracion {
+  id: string;
+  nombre_cliente: string;
+  puntuacion: number;
+  comentario: string;
+  created_at: string;
+}
 
 interface PanelPrestadorProps {
-  prestadorData: { dni: string };
+  /** Link tokenizado /p/:providerToken, sin login. Si no se pasa, usa la sesión JWT (login por DNI). */
+  providerToken?: string;
   onCerrarSesion: () => void;
 }
 
 const esVideoUrl = (url: string) =>
   /\.(mp4|mov|avi|webm|mkv|ogv)(\?.*)?$/i.test(url);
 
-export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelPrestadorProps) {
+export default function PanelPrestador({ providerToken, onCerrarSesion }: PanelPrestadorProps) {
   const navigate = useNavigate();
   const prestadorSession = usePrestadorSession();
 
-  const [prestador, setPrestador] = useState<Prestador | null>(null);
+  const [panel, setPanel] = useState<PanelPrestadorData | null>(null);
   const [valoraciones, setValoraciones] = useState<Valoracion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actualizandoTrabajoId, setActualizandoTrabajoId] = useState<string | null>(null);
 
-  // ── Disponibilidad (solo lectura) ─────────────────────────
-  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
-
-  // ── Reservas ──────────────────────────────────────────────
-  const [misReservas, setMisReservas] = useState<Reserva[]>([]);
-  const [misComisiones, setMisComisiones] = useState<Comision[]>([]);
-  const [cargandoReservas, setCargandoReservas] = useState(false);
-  const [modalCancelacion, setModalCancelacion] = useState<string | null>(null);
-  const [motivoCancelacion, setMotivoCancelacion] = useState('');
-  const [enviandoCancelacion, setEnviandoCancelacion] = useState(false);
-
-  // ── Carga de datos ────────────────────────────────────────
-  const cargarDisponibilidad = async (prestadorId: string) => {
-    const { data } = await supabase
-      .from('disponibilidad_prestadores')
-      .select('dia_semana, turno')
-      .eq('prestador_id', prestadorId);
-    if (data) {
-      const mapa: DisponibilidadMap = {};
-      data.forEach(({ dia_semana, turno }: { dia_semana: number; turno: Turno }) => {
-        if (!mapa[dia_semana]) mapa[dia_semana] = [];
-        mapa[dia_semana].push(turno);
-      });
-      setDisponibilidad(mapa);
-    }
-  };
-
-  const cargarReservasPrestador = async (prestadorId: string) => {
-    setCargandoReservas(true);
-    try {
-      const [reservasResult, comisionesResult] = await Promise.allSettled([
-        reservasApi.listarTodas({ prestador_id: prestadorId }),
-        comisionesApi.listarPorPrestador(prestadorId),
-      ]);
-      setMisReservas(reservasResult.status === 'fulfilled' ? reservasResult.value : []);
-      setMisComisiones(comisionesResult.status === 'fulfilled' ? comisionesResult.value : []);
-    } finally {
-      setCargandoReservas(false);
-    }
-  };
+  useEffect(() => {
+    cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providerToken, prestadorSession.token]);
 
   const cargarDatos = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const { data: prestadorInfo, error } = await supabase
-        .from('prestadores')
-        .select('*')
-        .eq('dni', prestadorData.dni)
-        .maybeSingle();
+      const data = await panelPrestadorApi.obtenerPanel(
+        providerToken ? { providerToken } : { token: prestadorSession.token ?? undefined }
+      );
+      setPanel(data);
+      if (!providerToken) prestadorSession.setPrestadorId(data.prestador.id);
 
-      if (error) throw error;
-
-      if (prestadorInfo) {
-        setPrestador(prestadorInfo);
-        prestadorSession.setPrestadorId(prestadorInfo.id);
-        cargarDisponibilidad(prestadorInfo.id);
-        cargarReservasPrestador(prestadorInfo.id);
-
-        const { data: valoracionesData } = await supabase
-          .from('valoraciones')
-          .select('*')
-          .eq('prestador_id', prestadorInfo.id)
-          .order('created_at', { ascending: false });
-        setValoraciones(valoracionesData || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
+      const { data: valoracionesData } = await supabase
+        .from('valoraciones')
+        .select('id, nombre_cliente, puntuacion, comentario, created_at')
+        .eq('prestador_id', data.prestador.id)
+        .order('created_at', { ascending: false });
+      setValoraciones(valoracionesData || []);
+    } catch (e) {
+      console.error('Error al cargar el panel:', e);
+      setError('No pudimos cargar tu panel. Verificá el link o volvé a iniciar sesión.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    cargarDatos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prestadorData.dni]);
-
-  // ── Cancelación de reserva ────────────────────────────────
-  const solicitarCancelacion = async () => {
-    if (!modalCancelacion || !motivoCancelacion.trim()) return;
-    setEnviandoCancelacion(true);
+  const handleCambiarEstadoTrabajo = async (trabajo: Trabajo, estado: TrabajoEstado) => {
+    if (!trabajo.job_token) return;
+    setActualizandoTrabajoId(trabajo.id);
     try {
-      await reservasApi.actualizarEstado(modalCancelacion, 'cancelacion_solicitada_por_prestador', {
-        motivo_cancelacion: motivoCancelacion.trim(),
-      });
-      setModalCancelacion(null);
-      setMotivoCancelacion('');
-      if (prestador) await cargarReservasPrestador(prestador.id);
+      const actualizado = await leadsApi.actualizarEstadoTrabajo(trabajo.job_token, estado);
+      setPanel((prev) => prev ? {
+        ...prev,
+        trabajos: prev.trabajos.map((t) => (t.id === actualizado.id ? actualizado : t)),
+      } : prev);
     } catch (e) {
-      console.error(e);
+      console.error('Error al actualizar estado:', e);
     } finally {
-      setEnviandoCancelacion(false);
+      setActualizandoTrabajoId(null);
     }
   };
 
-  // ── Estados de carga ──────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex items-center justify-center">
@@ -145,17 +90,32 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
     );
   }
 
-  if (!prestador) return null;
+  if (error || !panel) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419] flex flex-col items-center justify-center p-6 text-center">
+        <i className="ri-error-warning-line text-5xl text-gray-600 mb-4" />
+        <p className="text-gray-400 text-lg">{error || 'No pudimos cargar tu panel.'}</p>
+      </div>
+    );
+  }
 
-  const valoracionPromedio =
-    valoraciones.length > 0
-      ? valoraciones.reduce((acc, v) => acc + v.puntuacion, 0) / valoraciones.length
-      : 0;
-
+  const { prestador, trabajos, membresias } = panel;
   const galeria: string[] = prestador.galeria_urls || [];
   const zonasSeleccionadas: string[] = prestador.zona
     ? prestador.zona.split(',').map((z: string) => z.trim()).filter(Boolean)
     : [];
+
+  const tasaRespuesta = prestador.total_leads > 0
+    ? Math.round((prestador.total_contacted / prestador.total_leads) * 100)
+    : 0;
+  const tasaFinalizacion = prestador.total_leads > 0
+    ? Math.round((prestador.total_completed / prestador.total_leads) * 100)
+    : 0;
+
+  const trabajosActivos = trabajos.filter((t) => t.estado !== 'terminado' && t.estado !== 'no_avanzo');
+  const trabajosHistorial = trabajos.filter((t) => t.estado === 'terminado' || t.estado === 'no_avanzo');
+
+  const membresiaVigente = membresias.find((m) => m.estado === 'pending' || m.estado === 'overdue');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f1419]">
@@ -176,19 +136,21 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
               <i className="ri-home-line"></i>
               <span className="hidden sm:inline text-sm">Inicio</span>
             </button>
-            <button
-              onClick={() => navigate('/chat')}
-              className="p-2 sm:px-3 sm:py-1.5 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <i className="ri-chat-3-line"></i>
-              <span className="hidden sm:inline text-sm">Mensajes</span>
-            </button>
+            {!providerToken && (
+              <button
+                onClick={() => navigate('/chat')}
+                className="p-2 sm:px-3 sm:py-1.5 bg-[#e2b040]/10 text-[#e2b040] rounded-lg hover:bg-[#e2b040]/20 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <i className="ri-chat-3-line"></i>
+                <span className="hidden sm:inline text-sm">Mensajes</span>
+              </button>
+            )}
             <button
               onClick={onCerrarSesion}
               className="p-2 sm:px-3 sm:py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <i className="ri-logout-box-line"></i>
-              <span className="hidden sm:inline text-sm">Cerrar Sesión</span>
+              <span className="hidden sm:inline text-sm">{providerToken ? 'Salir' : 'Cerrar Sesión'}</span>
             </button>
           </div>
         </div>
@@ -197,8 +159,50 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
       <div className="px-4 py-8 sm:px-6 sm:py-12">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Mi Perfil</h1>
-            <p className="text-gray-400 text-lg">Visualizá tu información y tus valoraciones</p>
+            <h1 className="text-4xl font-bold text-white mb-2">Mi Panel</h1>
+            <p className="text-gray-400 text-lg">Trabajos, métricas y estado de tu cuenta</p>
+          </div>
+
+          {/* ── Badges + ranking ── */}
+          <div className="flex flex-wrap items-center gap-2 mb-8">
+            {prestador.verification_status === 'verified' && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500/15 text-green-400 border border-green-400/30 rounded-full text-xs font-semibold">
+                <i className="ri-shield-check-fill" />Verificado
+              </span>
+            )}
+            {prestador.is_top && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#e2b040]/15 text-[#e2b040] border border-[#e2b040]/40 rounded-full text-xs font-semibold">
+                <i className="ri-trophy-fill" />TOP
+              </span>
+            )}
+            {prestador.is_featured && !prestador.is_top && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#f0d080]/15 text-[#f0d080] border border-[#f0d080]/40 rounded-full text-xs font-semibold">
+                <i className="ri-star-smile-fill" />Destacado
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/5 text-gray-400 border border-white/10 rounded-full text-xs">
+              <i className="ri-bar-chart-2-line" />Verificación: {VERIFICATION_LABELS[prestador.verification_status]}
+            </span>
+          </div>
+
+          {/* ── Métricas ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="bg-[#1a1a2e]/80 border border-[#e2b040]/20 rounded-2xl p-5 text-center">
+              <p className="text-3xl font-bold text-white">{prestador.total_leads}</p>
+              <p className="text-gray-500 text-xs mt-1">Contactos totales</p>
+            </div>
+            <div className="bg-[#1a1a2e]/80 border border-[#e2b040]/20 rounded-2xl p-5 text-center">
+              <p className="text-3xl font-bold text-white">{prestador.total_completed}</p>
+              <p className="text-gray-500 text-xs mt-1">Trabajos terminados</p>
+            </div>
+            <div className="bg-[#1a1a2e]/80 border border-[#e2b040]/20 rounded-2xl p-5 text-center">
+              <p className="text-3xl font-bold text-[#e2b040]">{tasaRespuesta}%</p>
+              <p className="text-gray-500 text-xs mt-1">Tasa de respuesta</p>
+            </div>
+            <div className="bg-[#1a1a2e]/80 border border-[#e2b040]/20 rounded-2xl p-5 text-center">
+              <p className="text-3xl font-bold text-[#e2b040]">{tasaFinalizacion}%</p>
+              <p className="text-gray-500 text-xs mt-1">Tasa de finalización</p>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -208,7 +212,6 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                 <h2 className="text-2xl font-bold text-white mb-6">Información Personal</h2>
 
                 <div className="space-y-6">
-                  {/* Foto de perfil */}
                   <div className="flex items-center gap-6">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#e2b040] flex-shrink-0">
                       <img
@@ -235,18 +238,8 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                   </div>
 
                   <div>
-                    <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">DNI</label>
-                    <p className="text-white text-base">{prestador.dni}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Email</label>
-                    <p className="text-white text-base">{prestador.email || '—'}</p>
-                  </div>
-
-                  <div>
                     <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">Teléfono WhatsApp</label>
-                    <p className="text-white text-base">{(prestador as any).telefono || 'No especificado'}</p>
+                    <p className="text-white text-base">{prestador.telefono || 'No especificado'}</p>
                   </div>
 
                   <div>
@@ -280,7 +273,6 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                     <p className="text-gray-300 text-base leading-relaxed">{prestador.descripcion || '—'}</p>
                   </div>
 
-                  {/* Galería de trabajos */}
                   <div>
                     <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">
                       Fotos / Videos del Trabajo
@@ -320,7 +312,6 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
                   </div>
                 </div>
 
-                {/* Aviso */}
                 <p className="mt-6 text-xs text-gray-600 flex items-start gap-1.5">
                   <i className="ri-information-line mt-0.5 shrink-0" />
                   Para modificar tu información, contactá al administrador.
@@ -328,71 +319,147 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
               </div>
             </div>
 
-            {/* ── Estadísticas ── */}
+            {/* ── Rating + Membresía ── */}
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-[#e2b040] to-[#f0d080] rounded-2xl p-6 shadow-xl">
                 <div className="text-center">
                   <i className="ri-star-fill text-[#1a1a2e] text-4xl mb-3"></i>
                   <h3 className="text-3xl font-bold text-[#1a1a2e] mb-1">
-                    {valoracionPromedio > 0 ? valoracionPromedio.toFixed(1) : 'N/A'}
+                    {prestador.average_rating > 0 ? prestador.average_rating.toFixed(1) : 'N/A'}
                   </h3>
                   <p className="text-[#1a1a2e] font-semibold">Valoración Promedio</p>
+                  <p className="text-[#1a1a2e]/70 text-sm mt-1">{prestador.review_count} reseñas</p>
                 </div>
               </div>
 
               <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-6">
-                <div className="text-center">
-                  <i className="ri-message-3-line text-[#e2b040] text-4xl mb-3"></i>
-                  <h3 className="text-3xl font-bold text-white mb-1">{valoraciones.length}</h3>
-                  <p className="text-gray-400 font-semibold">Valoraciones Totales</p>
+                <h3 className="text-white font-bold text-base mb-4 flex items-center gap-2">
+                  <i className="ri-vip-crown-line text-[#e2b040]" />
+                  Mi plan
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <p className="text-gray-400">
+                    Fase: <span className="text-white font-medium">{PLAN_PHASE_LABELS[prestador.plan_phase]}</span>
+                  </p>
+                  <p className="text-gray-400">
+                    Membresía: <span className="text-white font-medium">{MEMBERSHIP_STATUS_LABELS[prestador.membership_status]}</span>
+                  </p>
+                  {prestador.monthly_price && (
+                    <p className="text-gray-400">
+                      Cuota: <span className="text-white font-medium">${prestador.monthly_price.toLocaleString('es-AR')}</span>
+                    </p>
+                  )}
+                </div>
+                {membresiaVigente?.payment_link && (
+                  <a
+                    href={membresiaVigente.payment_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-[#e2b040] text-[#1a1a2e] rounded-xl text-sm font-bold hover:bg-[#f0d080] transition-colors w-full justify-center"
+                  >
+                    <i className="ri-bank-card-line" />
+                    Pagar membresía
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Trabajos activos ── */}
+          <div className="mt-8">
+            <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Trabajos en curso</h2>
+                  <p className="text-gray-400 text-sm mt-1">Actualizar el estado te ayuda a aparecer más arriba</p>
+                </div>
+                <button
+                  onClick={cargarDatos}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-sm transition-colors cursor-pointer"
+                >
+                  <i className="ri-refresh-line" />
+                  Actualizar
+                </button>
+              </div>
+
+              {trabajosActivos.length > 0 ? (
+                <div className="space-y-4">
+                  {trabajosActivos.map((trabajo) => (
+                    <div key={trabajo.id} className="bg-[#16213e] border border-[#e2b040]/15 rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                        <div>
+                          <p className="text-white font-semibold text-sm">{trabajo.vecino_nombre}</p>
+                          <p className="text-gray-400 text-xs mt-0.5">
+                            <i className="ri-phone-line mr-1" />{trabajo.vecino_telefono} · {formatFechaTrabajo(trabajo.created_at)}
+                          </p>
+                          {trabajo.servicio_descripcion && (
+                            <p className="text-gray-500 text-xs mt-1">{trabajo.servicio_descripcion}</p>
+                          )}
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TRABAJO_ESTADO_COLORS[trabajo.estado]}`}>
+                          {TRABAJO_ESTADO_LABELS[trabajo.estado]}
+                        </span>
+                      </div>
+                      <TrabajoEstadoButtons
+                        estadoActual={trabajo.estado}
+                        onCambiarEstado={(estado) => handleCambiarEstadoTrabajo(trabajo, estado)}
+                        actualizando={actualizandoTrabajoId === trabajo.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <i className="ri-briefcase-line text-5xl text-gray-700 mb-3 block" />
+                  <p className="text-gray-500">No tenés trabajos en curso</p>
+                </div>
+              )}
+
+              {trabajosHistorial.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-white/5">
+                  <h3 className="text-sm font-semibold text-gray-400 mb-3">Historial reciente</h3>
+                  <div className="space-y-2">
+                    {trabajosHistorial.slice(0, 5).map((trabajo) => (
+                      <div key={trabajo.id} className="bg-[#16213e] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-white text-sm font-medium">{trabajo.vecino_nombre}</p>
+                          <p className="text-gray-500 text-xs">{formatFechaTrabajo(trabajo.created_at)}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${TRABAJO_ESTADO_COLORS[trabajo.estado]}`}>
+                          {TRABAJO_ESTADO_LABELS[trabajo.estado]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Membresías ── */}
+          {membresias.length > 0 && (
+            <div className="mt-8">
+              <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
+                <h2 className="text-2xl font-bold text-white mb-6">Mis pagos</h2>
+                <div className="space-y-3">
+                  {membresias.map((m) => (
+                    <div key={m.id} className="bg-[#16213e] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="text-white text-sm font-medium">{m.plan_name}</p>
+                        <p className="text-gray-500 text-xs">{m.period_start} — {m.period_end}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#e2b040] font-bold text-sm">${m.amount.toLocaleString('es-AR')}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${MEMBRESIA_ESTADO_COLORS[m.estado]}`}>
+                          {MEMBRESIA_ESTADO_LABELS[m.estado]}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* ── Disponibilidad (solo lectura) ── */}
-          <div className="mt-8">
-            <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-white">Mi Disponibilidad</h2>
-                <p className="text-gray-400 text-sm mt-1">Días y turnos en que podés trabajar</p>
-              </div>
-
-              <div className="grid gap-2">
-                {DIAS_SEMANA.map(({ valor, nombre }) => {
-                  const turnos = disponibilidad[valor] || [];
-                  return (
-                    <div key={valor} className="flex items-center bg-[#16213e] rounded-xl px-4 py-3 gap-3">
-                      <span className="text-white font-medium text-sm flex-shrink-0 w-20">{nombre}</span>
-                      <div className="flex gap-2 flex-1">
-                        {(['mañana', 'tarde'] as Turno[]).map(turno => {
-                          const activo = turnos.includes(turno);
-                          return (
-                            <div
-                              key={turno}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold ${
-                                activo
-                                  ? 'bg-[#e2b040] text-[#1a1a2e]'
-                                  : 'bg-[#1a1a2e] border border-white/10 text-gray-600'
-                              }`}
-                            >
-                              <i className={turno === 'mañana' ? 'ri-sun-line' : 'ri-moon-line'} />
-                              {turno === 'mañana' ? 'Mañana' : 'Tarde'}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <p className="text-gray-600 text-xs mt-4 flex items-center gap-1">
-                <i className="ri-information-line" />
-                Para modificar tu disponibilidad, contactá al administrador.
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* ── Valoraciones ── */}
           <div className="mt-8">
@@ -430,196 +497,8 @@ export default function PanelPrestador({ prestadorData, onCerrarSesion }: PanelP
               )}
             </div>
           </div>
-
-          {/* ── Mis Reservas ── */}
-          <div className="mt-8">
-            <div className="bg-[#1a1a2e]/80 backdrop-blur-sm border border-[#e2b040]/30 rounded-2xl p-8">
-              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Mis Reservas</h2>
-                  <p className="text-gray-400 text-sm mt-1">Reservas activas y comisiones pendientes</p>
-                </div>
-                {prestador && (
-                  <button
-                    onClick={() => cargarReservasPrestador(prestador.id)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-sm transition-colors cursor-pointer"
-                  >
-                    <i className={`ri-refresh-line ${cargandoReservas ? 'animate-spin' : ''}`} />
-                    Actualizar
-                  </button>
-                )}
-              </div>
-
-              {cargandoReservas ? (
-                <div className="flex justify-center py-8">
-                  <i className="ri-loader-4-line animate-spin text-3xl text-[#e2b040]" />
-                </div>
-              ) : (
-                <>
-                  {/* Comisiones pendientes */}
-                  {misComisiones.filter(c => c.estado !== 'comision_pagada').length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-sm font-semibold text-orange-300 mb-3 flex items-center gap-2">
-                        <i className="ri-coins-line" />
-                        Comisiones pendientes de pago
-                      </h3>
-                      <div className="space-y-3">
-                        {misComisiones.filter(c => c.estado !== 'comision_pagada').map(c => (
-                          <div key={c.id} className="bg-[#16213e] border border-orange-500/30 rounded-xl p-4">
-                            <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div>
-                                <p className="text-white font-semibold text-sm">Comisión por trabajo concretado</p>
-                                {c.reservas && (
-                                  <p className="text-gray-400 text-xs mt-0.5">
-                                    {formatFechaReserva(c.reservas.dia)} · {c.reservas.turno === 'mañana' ? 'Mañana' : 'Tarde'}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-orange-300 font-bold text-base">$3.000</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${COMISION_ESTADO_COLORS[c.estado]}`}>
-                                  {COMISION_ESTADO_LABELS[c.estado]}
-                                </span>
-                              </div>
-                            </div>
-                            {c.mp_init_point && (
-                              <div className="mt-3 pt-3 border-t border-white/5">
-                                <a
-                                  href={c.mp_init_point}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e2b040] text-[#1a1a2e] rounded-xl text-sm font-bold hover:bg-[#f0d080] transition-colors"
-                                >
-                                  <i className="ri-bank-card-line" />
-                                  Pagar $3.000 ahora
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Reservas activas */}
-                  {misReservas.filter(r => r.estado === 'reserva_activa').length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
-                        <i className="ri-calendar-line" />
-                        Reservas activas
-                      </h3>
-                      <div className="space-y-3">
-                        {misReservas.filter(r => r.estado === 'reserva_activa').map(r => (
-                          <div key={r.id} className="bg-[#16213e] border border-[#e2b040]/15 rounded-xl p-4">
-                            <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div>
-                                <p className="text-white font-semibold text-sm">{r.nombre} {r.apellido}</p>
-                                <p className="text-gray-400 text-xs mt-0.5">
-                                  <i className="ri-phone-line mr-1" />{r.telefono}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-[#e2b040] text-sm font-semibold">{formatFechaReserva(r.dia)}</p>
-                                <p className="text-gray-400 text-xs">{r.turno === 'mañana' ? '🌅 Mañana' : '🌆 Tarde'}</p>
-                              </div>
-                            </div>
-                            {(r.zona || r.descripcion_trabajo) && (
-                              <div className="mt-2 text-xs text-gray-400 space-y-0.5">
-                                {r.zona && <p><i className="ri-map-pin-line mr-1 text-[#e2b040]" />{r.zona}</p>}
-                                {r.descripcion_trabajo && <p><i className="ri-tools-line mr-1 text-[#e2b040]" />{r.descripcion_trabajo}</p>}
-                              </div>
-                            )}
-                            <div className="mt-3 pt-3 border-t border-white/5">
-                              <button
-                                onClick={() => { setModalCancelacion(r.id); setMotivoCancelacion(''); }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs transition-colors cursor-pointer"
-                              >
-                                <i className="ri-close-circle-line" />
-                                Solicitar cancelación
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Historial */}
-                  {misReservas.filter(r => r.estado === 'trabajo_concretado').length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-green-300 mb-3 flex items-center gap-2">
-                        <i className="ri-checkbox-circle-line" />
-                        Trabajos concretados
-                      </h3>
-                      <div className="space-y-2">
-                        {misReservas.filter(r => r.estado === 'trabajo_concretado').slice(0, 5).map(r => (
-                          <div key={r.id} className="bg-[#16213e] border border-green-500/15 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-white text-sm font-medium">{r.nombre} {r.apellido}</p>
-                              <p className="text-gray-500 text-xs">{formatFechaReserva(r.dia)}</p>
-                            </div>
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-300">
-                              {RESERVA_ESTADO_LABELS[r.estado]}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {misReservas.length === 0 && misComisiones.length === 0 && (
-                    <div className="text-center py-10">
-                      <i className="ri-calendar-line text-5xl text-gray-700 mb-3 block" />
-                      <p className="text-gray-500">Todavía no tenés reservas</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
         </div>
       </div>
-
-      {/* ── Modal solicitud de cancelación ── */}
-      {modalCancelacion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setModalCancelacion(null)}
-          />
-          <div className="relative bg-[#16213e] border border-[#e2b040]/20 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-white font-bold text-lg mb-2">Solicitar cancelación</h3>
-            <p className="text-gray-400 text-sm mb-4 leading-relaxed">
-              El administrador notificará al cliente. Si el cliente confirma, no se cobra comisión.
-              Si rechaza, la reserva quedará como incidente para revisión.
-            </p>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Motivo *</label>
-            <textarea
-              value={motivoCancelacion}
-              onChange={e => setMotivoCancelacion(e.target.value)}
-              rows={3}
-              placeholder="Explicá brevemente por qué necesitás cancelar..."
-              className="w-full px-3 py-2.5 bg-[#1a1a2e] border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm resize-none transition-colors"
-            />
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={solicitarCancelacion}
-                disabled={!motivoCancelacion.trim() || enviandoCancelacion}
-                className="flex-1 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {enviandoCancelacion ? 'Enviando...' : 'Solicitar cancelación'}
-              </button>
-              <button
-                onClick={() => setModalCancelacion(null)}
-                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

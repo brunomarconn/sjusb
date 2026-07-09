@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import AppHeader from '../../components/AppHeader';
+import { configPublicaApi } from '../../api/configPublicaApi';
+import type { ConfigPublica } from '../../types/configBarrio';
 import serviciosDeCateringImg from '../../../images/serviciosdecatering.png';
 import servicioTecnicoInformaticoImg from '../../../images/serviciotecnicoinformatico.png';
 import tecnicoElectrodomesticosImg from '../../../images/tecnicoelectrodomesticos.jpeg';
@@ -184,7 +186,7 @@ const pasos = [
     numero: '02',
     icono: 'ri-user-star-line',
     titulo: 'Elegí tu prestador',
-    descripcion: 'Revisá perfiles, valoraciones y experiencia de cada profesional verificado.',
+    descripcion: 'Revisá perfiles, reseñas de otros vecinos y badges de cada profesional.',
   },
   {
     numero: '03',
@@ -244,6 +246,13 @@ export default function Inicio() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [configPublica, setConfigPublica] = useState<ConfigPublica | null>(null);
+
+  useEffect(() => {
+    configPublicaApi.obtener().then(setConfigPublica);
+  }, []);
+
+  const esOficial = configPublica?.official_status === 'official';
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
 
   const sugerencias = busqueda.trim()
@@ -302,10 +311,10 @@ export default function Inicio() {
         </div>
 
         <div className="relative w-full max-w-3xl mx-auto text-center px-4 sm:px-6 pt-24 pb-6">
-          {/* Badge */}
+          {/* Badge — el texto "oficial" solo se muestra si el barrio lo habilita desde admin */}
           <div className="mb-4 sm:mb-5">
             <span className="inline-block px-3 sm:px-4 py-1 bg-[#e2b040]/20 border border-[#e2b040]/40 text-[#e2b040] rounded-full text-xs sm:text-sm font-semibold tracking-widest uppercase">
-              Prestadores verificados · Córdoba
+              {esOficial ? 'Canal oficial de San Isidro' : 'La app de servicios de San Isidro'}
             </span>
           </div>
 
@@ -316,7 +325,7 @@ export default function Inicio() {
           </h1>
 
           <p className="text-gray-300 text-sm sm:text-lg max-w-xl mx-auto mb-6 sm:mb-8 leading-relaxed px-2">
-            Buscá prestadores verificados en Córdoba y contactalos por WhatsApp.
+            Buscá el servicio que necesitás, mirá referencias de otros vecinos y contactá directo por WhatsApp.
           </p>
 
           {/* Search bar — 16 px mínimo para evitar zoom en iOS */}
@@ -483,10 +492,10 @@ export default function Inicio() {
             </div>
             <div className="flex-1 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-5 sm:p-10 flex flex-col justify-center">
               <h3 className="text-lg sm:text-3xl font-bold text-white mb-2 sm:mb-3">
-                Profesionales <span className="text-[#e2b040]">verificados</span> y confiables
+                Prestadores con <span className="text-[#e2b040]">referencias reales</span> del barrio
               </h3>
               <p className="text-gray-300 text-sm sm:text-base leading-relaxed mb-4 sm:mb-5">
-                Cada prestador pasa por un proceso de verificación para garantizarte calidad y seguridad en cada servicio.
+                Elegís según las reseñas de otros vecinos y, cuando corresponde, el badge de verificación de identidad.
               </p>
               <button
                 onClick={() => navigate('/usuarios')}

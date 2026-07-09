@@ -1,0 +1,28 @@
+Etapa 1 — Validación en San Isidro
+
+MrServicios
+- Conseguir 3 a 5 prestadores por categoría clave.
+- Juntar reseñas.
+- Hablar con vecinos.
+
+Prestadores
+- Aparecen gratis (tienen que haber sido recomendados por alguien)
+- Pagan comision fija por cada reserva que les llegue, se encargan de avisar que no hicieron el trabajo para no pagar la comisión
+- Si no pagan o dejan de contestar, se los desactiva de la pagina
+
+Etapa 2 — Cobro inicial
+
+No se cobra comision por trabajo realizado, si no por cada lead ??
+Mostrarle a cada prestador cuántos contactos recibió. Dashboard para ver más informacion
+
+Etapa 3 — Escalado a otros barrios
+
+Se cobra una mensualidad por aparecer en la pagina, esto es cuando ya es conocida la pagina. 
+
+Crear filtro por barrio.
+Cada prestador elige en qué barrios quiere aparecer.
+
+Cobran por barrio o por plan:
+Plan Básico: 1 barrio
+Plan Plus: 3 barrios
+Plan Premium: todos los barrios + destacado

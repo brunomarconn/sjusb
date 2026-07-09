@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { prestadoresMock } from '../../mocks/prestadores';
 import AppHeader from '../../components/AppHeader';
 import { authApi } from '../../api/authApi';
+import { leadsApi } from '../../api/leadsApi';
+import { resenasApi } from '../../api/resenasApi';
 import { useClienteSession } from '../../context/ClienteSessionContext';
 import { CATEGORIAS_FILTRO_USUARIOS } from '../../constants/categorias';
 import { SINONIMOS_PROFESIONES } from '../../constants/sinonimos';
@@ -33,6 +35,41 @@ interface Prestador {
   descripcion: string;
   created_at: string;
   valoraciones?: Valoracion[];
+  visibility_status?: string;
+  verification_status?: string;
+  is_featured?: boolean;
+  is_top?: boolean;
+  ranking_score?: number;
+}
+
+function renderBadges(p: Prestador, size: 'sm' | 'md' = 'sm') {
+  const esNuevo = !p.ranking_score && (!p.valoraciones || p.valoraciones.length === 0);
+  const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const badgeBase = `inline-flex items-center gap-1 px-2 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full ${textSize} font-semibold border`;
+  return (
+    <>
+      {p.verification_status === 'verified' && (
+        <span className={`${badgeBase} text-green-400 border-green-400/30`}>
+          <i className="ri-shield-check-fill text-xs"></i>Verificado
+        </span>
+      )}
+      {p.is_top && (
+        <span className={`${badgeBase} text-[#e2b040] border-[#e2b040]/40`}>
+          <i className="ri-trophy-fill text-xs"></i>TOP
+        </span>
+      )}
+      {p.is_featured && !p.is_top && (
+        <span className={`${badgeBase} text-[#f0d080] border-[#f0d080]/40`}>
+          <i className="ri-star-smile-fill text-xs"></i>Destacado
+        </span>
+      )}
+      {esNuevo && (
+        <span className={`${badgeBase} text-blue-300 border-blue-400/30`}>
+          <i className="ri-sparkling-2-fill text-xs"></i>Nuevo
+        </span>
+      )}
+    </>
+  );
 }
 
 function esVideo(url: string): boolean {
@@ -179,6 +216,13 @@ export default function Usuarios() {
   const [prestadorModal, setPrestadorModal] = useState<Prestador | null>(null);
   const [modalCarouselIdx, setModalCarouselIdx] = useState(0);
 
+  const [contactoModal, setContactoModal] = useState<Prestador | null>(null);
+  const [contactoNombre, setContactoNombre] = useState('');
+  const [contactoTelefono, setContactoTelefono] = useState('');
+  const [contactoDescripcion, setContactoDescripcion] = useState('');
+  const [errorContactoTelefono, setErrorContactoTelefono] = useState('');
+  const [enviandoContacto, setEnviandoContacto] = useState(false);
+
   useEffect(() => {
     document.body.style.overflow = prestadorModal ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -221,21 +265,32 @@ export default function Usuarios() {
     setLoading(true);
     setError('');
     try {
-      const selectBase = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
+      const selectNuevo = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
+          visibility_status, verification_status, is_featured, is_top, ranking_score,
+          valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
+      // Select mínimo (sin columnas del modelo de leads) para cuando esa migración
+      // todavía no corrió contra este proyecto de Supabase.
+      const selectLegacy = `id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at,
           valoraciones ( id, prestador_id, cliente_email, nombre_cliente, puntuacion, comentario, created_at )`;
 
-      // Intentar con filtro enabled=true primero
-      let result = await supabase
+      // Intentar con filtros de habilitado/visible primero
+      let result: { data: unknown[] | null; error: { message?: string } | null } = await supabase
         .from('prestadores')
-        .select(selectBase)
+        .select(selectNuevo)
         .eq('enabled', true)
-        .order('created_at', { ascending: false });
+        .eq('visibility_status', 'visible')
+        .order('ranking_score', { ascending: false });
 
-      // Si falla porque la columna 'enabled' aún no existe en el esquema, reintentar sin el filtro
-      if (result.error && (result.error.message?.toLowerCase().includes('enabled') || result.error.message?.toLowerCase().includes('schema cache'))) {
+      // Si falla porque alguna columna nueva aún no existe en el esquema, reintentar
+      // con el select mínimo (compatible con el esquema previo a esta migración).
+      if (result.error && (
+        result.error.message?.toLowerCase().includes('enabled')
+        || result.error.message?.toLowerCase().includes('visibility_status')
+        || result.error.message?.toLowerCase().includes('schema cache')
+      )) {
         result = await supabase
           .from('prestadores')
-          .select(selectBase)
+          .select(selectLegacy)
           .order('created_at', { ascending: false });
       }
 
@@ -279,6 +334,52 @@ export default function Usuarios() {
     });
   };
 
+  const abrirModalContacto = (prestador: Prestador) => {
+    setContactoModal(prestador);
+    setContactoNombre('');
+    setContactoTelefono('');
+    setContactoDescripcion('');
+    setErrorContactoTelefono('');
+  };
+
+  const handleConfirmarContacto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactoModal || !contactoNombre.trim() || !contactoTelefono.trim()) return;
+
+    const soloDigitos = contactoTelefono.replace(/\D/g, '');
+    if (soloDigitos.length < 10) {
+      setErrorContactoTelefono('El teléfono debe tener al menos 10 dígitos');
+      return;
+    }
+
+    setEnviandoContacto(true);
+    try {
+      // Abrir WhatsApp de forma SINCRÓNICA (antes de cualquier await): los
+      // navegadores bloquean window.open() si se llama tras una operación async.
+      const mensaje = `Hola ${contactoModal.nombre}, te contacto desde MrServicios por ${contactoModal.categoria}. Soy vecino/a de San Isidro.${contactoDescripcion.trim() ? `\n\n${contactoDescripcion.trim()}` : ''}`;
+      const numeroPrestador = contactoModal.telefono?.replace(/\D/g, '');
+      if (numeroPrestador) {
+        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      }
+
+      await leadsApi.crearLead({
+        prestador_id: contactoModal.id,
+        vecino_nombre: contactoNombre.trim(),
+        vecino_telefono: soloDigitos,
+        categoria: contactoModal.categoria,
+        servicio_descripcion: contactoDescripcion.trim() || undefined,
+        source: 'public_site',
+      });
+
+      clienteSession.marcarReservado(contactoModal.id);
+      setContactoModal(null);
+    } catch (err) {
+      console.error('Error al crear el contacto:', err);
+    } finally {
+      setEnviandoContacto(false);
+    }
+  };
+
   const handleValorar = (prestador: Prestador) => {
     if (!clienteDni) {
       if (window.confirm('Para valorar necesitás iniciar sesión. ¿Querés hacerlo ahora?')) navigate('/mi-cuenta');
@@ -299,14 +400,13 @@ export default function Usuarios() {
     if (!prestadorSeleccionado || !nombreCliente.trim() || !comentario.trim()) return;
     setEnviandoValoracion(true);
     try {
-      const { error: insertError } = await supabase.from('valoraciones').insert([{
+      await resenasApi.crearResenaManual({
         prestador_id: prestadorSeleccionado.id,
-        cliente_email: clienteDni || 'anonimo',
         nombre_cliente: nombreCliente.trim(),
-        puntuacion,
-        comentario: comentario.trim()
-      }]);
-      if (insertError) throw insertError;
+        cliente_email: clienteDni || 'anonimo',
+        rating: puntuacion,
+        comment: comentario.trim(),
+      });
 
       const nuevaValoracion: Valoracion = {
         id: Date.now().toString(),
@@ -448,6 +548,10 @@ export default function Usuarios() {
         return coincideCategoria && coincideZona;
       })
       .sort((a, b) => {
+        const rankingA = a.ranking_score ?? 0;
+        const rankingB = b.ranking_score ?? 0;
+        if (rankingB !== rankingA) return rankingB - rankingA;
+
         const promedioA = calcularPromedio(a.valoraciones || []);
         const promedioB = calcularPromedio(b.valoraciones || []);
         if (promedioB !== promedioA) return promedioB - promedioA;
@@ -687,10 +791,9 @@ export default function Usuarios() {
                           {/* Gradiente inferior */}
                           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#16213e] to-transparent pointer-events-none" />
 
-                          {/* Badge verificado */}
-                          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-[10px] sm:text-xs font-semibold text-green-400 border border-green-400/30">
-                            <i className="ri-shield-check-fill text-xs"></i>
-                            Verificado
+                          {/* Badges (solo si hay datos reales que los respalden) */}
+                          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-wrap gap-1 max-w-[80%]">
+                            {renderBadges(prestador)}
                           </div>
 
                           {/* Flechas — siempre visibles en mobile, aparecen con hover en desktop */}
@@ -768,7 +871,7 @@ export default function Usuarios() {
 
                       {/* CTA principal — WhatsApp */}
                       <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/reservar/${prestador.id}`); }}
+                        onClick={(e) => { e.stopPropagation(); abrirModalContacto(prestador); }}
                         className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-3 sm:py-4 bg-[#25D366] hover:bg-[#1da851] active:bg-[#178f42] text-white rounded-xl font-bold text-xs sm:text-base transition-all duration-200 cursor-pointer mb-2 shadow-md shadow-[#25D366]/20 min-h-[46px] sm:min-h-[52px]"
                         aria-label={`Contactar a ${prestador.nombre} por WhatsApp`}
                       >
@@ -948,9 +1051,8 @@ export default function Usuarios() {
                   <img key={mitem.url} src={mitem.url} alt={`${p.nombre} ${p.apellido}`} className="w-full h-full object-cover object-center" />
                 )}
                 <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#16213e] to-transparent pointer-events-none" />
-                <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold text-green-400 border border-green-400/30">
-                  <i className="ri-shield-check-fill text-xs" />
-                  Verificado
+                <div className="absolute top-3 left-3 flex flex-wrap gap-1 max-w-[85%]">
+                  {renderBadges(p, 'md')}
                 </div>
                 {media.length > 1 && (
                   <>
@@ -991,7 +1093,7 @@ export default function Usuarios() {
 
                 {/* WhatsApp */}
                 <button
-                  onClick={() => navigate(`/reservar/${p.id}`)}
+                  onClick={() => { setPrestadorModal(null); abrirModalContacto(p); }}
                   className="w-full flex items-center justify-center gap-2 py-4 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold text-base transition-colors cursor-pointer mb-3 shadow-md shadow-[#25D366]/20"
                 >
                   <i className="ri-whatsapp-line text-xl" />
@@ -1115,6 +1217,79 @@ export default function Usuarios() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Modal de contacto (previo a abrir WhatsApp) ── */}
+      {contactoModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          onClick={() => !enviandoContacto && setContactoModal(null)}
+        >
+          <form
+            onSubmit={handleConfirmarContacto}
+            className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-bold text-white">Contactar a {contactoModal.nombre}</h3>
+              <button type="button" onClick={() => setContactoModal(null)} className="p-2 text-gray-400 hover:text-white cursor-pointer">
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-5">
+              Te conectamos por WhatsApp con {contactoModal.nombre}. Estos datos quedan registrados para que el prestador pueda gestionar tu pedido.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Tu nombre</label>
+                <input
+                  type="text"
+                  value={contactoNombre}
+                  onChange={(e) => setContactoNombre(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Ej: María González"
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Tu teléfono</label>
+                <input
+                  type="tel"
+                  value={contactoTelefono}
+                  onChange={(e) => { setContactoTelefono(e.target.value); setErrorContactoTelefono(''); }}
+                  required
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Ej: 3511234567"
+                  style={{ fontSize: '16px' }}
+                />
+                {errorContactoTelefono && <p className="text-red-400 text-xs mt-1">{errorContactoTelefono}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">¿Qué necesitás? (opcional)</label>
+                <textarea
+                  value={contactoDescripcion}
+                  onChange={(e) => { if (e.target.value.length <= 300) setContactoDescripcion(e.target.value); }}
+                  maxLength={300}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors resize-none"
+                  placeholder="Contale brevemente qué necesitás..."
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={enviandoContacto || !contactoNombre.trim() || !contactoTelefono.trim()}
+              className="w-full mt-5 flex items-center justify-center gap-2 py-4 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold text-base transition-colors cursor-pointer shadow-md shadow-[#25D366]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="ri-whatsapp-line text-xl" />
+              {enviandoContacto ? 'Abriendo WhatsApp...' : 'Continuar a WhatsApp'}
+            </button>
+          </form>
         </div>
       )}
 

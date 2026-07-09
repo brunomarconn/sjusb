@@ -23,13 +23,32 @@ export interface AgregarValoracionInput {
   comentario?: string;
 }
 
-export interface DisponibilidadEntrada {
-  prestador_id: string;
-  dia_semana: number;
-  turno: 'mañana' | 'tarde';
+export interface CambiarVisibilidadInput {
+  id: string;
+  visibility_status: 'visible' | 'hidden' | 'suspended';
 }
 
-export interface GestionarDisponibilidadInput {
-  prestador_id: string;
-  entradas: DisponibilidadEntrada[];
+export interface CambiarVerificacionInput {
+  id: string;
+  verification_status: 'none' | 'pending' | 'verified' | 'rejected';
+}
+
+export interface CambiarPlanInput {
+  id: string;
+  plan_phase?: 'free_seed' | 'membership' | 'mixed' | 'premium';
+  membership_status?: 'not_required' | 'trial' | 'active' | 'past_due' | 'cancelled';
+  monthly_price?: number;
+  discount_rate?: number;
+}
+
+export interface MarcarDestacadoInput {
+  id: string;
+  is_featured?: boolean;
+  is_top?: boolean;
+}
+
+export interface ModerarValoracionInput {
+  id: string;
+  is_visible?: boolean;
+  admin_approved?: boolean;
 }

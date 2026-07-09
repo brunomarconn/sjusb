@@ -11,7 +11,7 @@ const faqs = [
   {
     pregunta: '¿Los prestadores están verificados?',
     respuesta:
-      'Sí. Todos los profesionales pasan por un proceso de verificación de identidad antes de ser publicados. Podés reconocerlos por el badge verde "Verificado" en su tarjeta.',
+      'Los prestadores con el badge verde "Verificado" pasaron un proceso de verificación de identidad y referencias. Los demás son igualmente parte de la comunidad, pero todavía no completaron ese proceso: fijate en las reseñas de otros vecinos para elegir con más información.',
   },
   {
     pregunta: '¿Cuánto cuesta usar MrServicios?',
@@ -21,7 +21,7 @@ const faqs = [
   {
     pregunta: '¿Cómo dejo una valoración?',
     respuesta:
-      'Una vez que hayas reservado y recibido el servicio, podés dejar una valoración desde la tarjeta del prestador. Solo pueden valorar quienes hayan reservado previamente.',
+      'Cuando el prestador marca tu trabajo como "Terminado", te llega un link para calificar el servicio en 10 segundos. También podés dejar una valoración desde la tarjeta del prestador si ya lo contactaste antes.',
   },
   {
     pregunta: '¿Qué hago si el prestador no responde?',
@@ -44,9 +44,9 @@ const faqs = [
       'Tus datos se usan exclusivamente para brindarte el servicio. No compartimos tu información con terceros sin tu consentimiento. El contacto por WhatsApp es directo entre vos y el prestador.',
   },
   {
-    pregunta: '¿Puedo cancelar una reserva?',
+    pregunta: '¿Qué pasa después de contactar a un prestador?',
     respuesta:
-      'Las condiciones de cancelación dependen de cada prestador. Te recomendamos consultarlo directamente antes de confirmar para evitar inconvenientes.',
+      'No tenés que hacer nada más de nuestro lado: arreglás el trabajo directamente con el prestador por WhatsApp, como siempre. Nosotros solo te vamos a pedir una reseña cuando el prestador marque el trabajo como terminado.',
   },
   {
     pregunta: '¿Cómo contacto al soporte de MrServicios?',

@@ -10,28 +10,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export interface Prestador {
-  id: string;
-  nombre: string;
-  apellido: string;
-  dni: string;
-  email: string;
-  password: string;
-  telefono?: string | null;
-  categoria: string;
-  zona?: string | null;
-  foto_url: string;
-  descripcion: string;
-  galeria_urls?: string[] | null;
-  created_at: string;
-}
-
-export interface Valoracion {
-  id: string;
-  prestador_id: string;
-  cliente_email: string;
-  nombre_cliente: string;
-  puntuacion: number;
-  comentario: string;
-  created_at: string;
-}
+// Tipos canónicos: viven en src/types/*, re-exportados acá por compatibilidad
+// con imports existentes (`import { supabase, type Prestador } from '../lib/supabase'`).
+// Nota: a diferencia del tipo viejo, este NO incluye `password` — nunca debe
+// seleccionarse esa columna desde el frontend.
+export type { Prestador } from '../types/prestador';
+export type { Valoracion } from '../types/resena';

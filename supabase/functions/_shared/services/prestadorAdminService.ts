@@ -3,15 +3,20 @@
 // ─────────────────────────────────────────────────────────────
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as prestadoresDao from '../dao/prestadoresDao.ts';
-import * as disponibilidadDao from '../dao/disponibilidadDao.ts';
 import * as valoracionesDao from '../dao/valoracionesDao.ts';
+import * as sancionesService from './sancionesService.ts';
+import * as rankingService from './rankingService.ts';
 import { hashPassword } from '../security/passwordHasher.ts';
 import type {
   ActualizarPrestadorInput,
   AgregarValoracionInput,
   CambiarEstadoInput,
   CrearPrestadorInput,
-  GestionarDisponibilidadInput,
+  CambiarVisibilidadInput,
+  CambiarVerificacionInput,
+  CambiarPlanInput,
+  MarcarDestacadoInput,
+  ModerarValoracionInput,
 } from '../dto/admin-prestador.dto.ts';
 
 async function conPasswordHasheada(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -24,8 +29,6 @@ async function conPasswordHasheada(payload: Record<string, unknown>): Promise<Re
 export async function crearPrestador(db: SupabaseClient, input: CrearPrestadorInput) {
   const payload = await conPasswordHasheada(input.payload);
   const { id } = await prestadoresDao.insertar(db, payload);
-  // Regla de negocio: todo prestador nuevo arranca con disponibilidad default L-V mañana/tarde
-  await disponibilidadDao.insertarDefault(db, id);
   return { id };
 }
 
@@ -47,6 +50,53 @@ export async function agregarValoracion(db: SupabaseClient, input: AgregarValora
   });
 }
 
-export async function gestionarDisponibilidad(db: SupabaseClient, input: GestionarDisponibilidadInput) {
-  await disponibilidadDao.reemplazarEntradas(db, input.prestador_id, input.entradas);
+export async function cambiarVisibilidad(db: SupabaseClient, input: CambiarVisibilidadInput) {
+  await prestadoresDao.actualizar(db, input.id, { visibility_status: input.visibility_status });
+}
+
+export async function cambiarVerificacion(db: SupabaseClient, input: CambiarVerificacionInput) {
+  await prestadoresDao.actualizar(db, input.id, { verification_status: input.verification_status });
+}
+
+export async function cambiarPlan(db: SupabaseClient, input: CambiarPlanInput) {
+  const payload: Record<string, unknown> = {};
+  if (input.plan_phase) payload.plan_phase = input.plan_phase;
+  if (input.membership_status) payload.membership_status = input.membership_status;
+  if (input.monthly_price !== undefined) payload.monthly_price = input.monthly_price;
+  if (input.discount_rate !== undefined) payload.discount_rate = input.discount_rate;
+  await prestadoresDao.actualizar(db, input.id, payload);
+}
+
+export async function marcarDestacado(db: SupabaseClient, input: MarcarDestacadoInput) {
+  const payload: Record<string, unknown> = {};
+  if (input.is_featured !== undefined) payload.is_featured = input.is_featured;
+  if (input.is_top !== undefined) payload.is_top = input.is_top;
+  await prestadoresDao.actualizar(db, input.id, payload);
+}
+
+export async function moderarValoracion(db: SupabaseClient, input: ModerarValoracionInput) {
+  await valoracionesDao.moderar(db, input.id, {
+    is_visible: input.is_visible,
+    admin_approved: input.admin_approved,
+  });
+}
+
+export async function listarValoraciones(db: SupabaseClient, filtros: valoracionesDao.FiltrosValoraciones) {
+  return valoracionesDao.listarTodas(db, filtros);
+}
+
+export async function crearSancion(db: SupabaseClient, input: sancionesService.CrearSancionInput) {
+  return sancionesService.crear(db, input);
+}
+
+export async function resolverSancion(db: SupabaseClient, id: string, prestadorId: string, adminNotes?: string) {
+  await sancionesService.resolver(db, id, prestadorId, adminNotes);
+}
+
+export async function listarSanciones(db: SupabaseClient, prestadorId: string) {
+  return sancionesService.listarPorPrestador(db, prestadorId);
+}
+
+export async function recalcularRanking(db: SupabaseClient) {
+  return rankingService.recalcularTodos(db);
 }

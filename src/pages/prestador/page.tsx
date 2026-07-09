@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import AppHeader from '../../components/AppHeader';
+import { leadsApi } from '../../api/leadsApi';
+import { useClienteSession } from '../../context/ClienteSessionContext';
 
 interface Prestador {
   id: string;
@@ -18,6 +20,40 @@ interface Prestador {
   galeria_urls?: string[] | null;
   descripcion: string;
   telefono?: string;
+  verification_status?: string;
+  is_featured?: boolean;
+  is_top?: boolean;
+  ranking_score?: number;
+  created_at?: string;
+}
+
+function renderBadges(p: Prestador, reviewCount: number) {
+  const esNuevo = !p.ranking_score && reviewCount === 0;
+  const badgeBase = 'inline-flex items-center gap-1 px-2.5 py-1 bg-[#16213e]/85 backdrop-blur-sm rounded-full text-xs font-semibold border';
+  return (
+    <>
+      {p.verification_status === 'verified' && (
+        <span className={`${badgeBase} text-green-400 border-green-400/30`}>
+          <i className="ri-shield-check-fill text-xs" />Verificado
+        </span>
+      )}
+      {p.is_top && (
+        <span className={`${badgeBase} text-[#e2b040] border-[#e2b040]/40`}>
+          <i className="ri-trophy-fill text-xs" />TOP
+        </span>
+      )}
+      {p.is_featured && !p.is_top && (
+        <span className={`${badgeBase} text-[#f0d080] border-[#f0d080]/40`}>
+          <i className="ri-star-smile-fill text-xs" />Destacado
+        </span>
+      )}
+      {esNuevo && (
+        <span className={`${badgeBase} text-blue-300 border-blue-400/30`}>
+          <i className="ri-sparkling-2-fill text-xs" />Nuevo
+        </span>
+      )}
+    </>
+  );
 }
 
 interface Valoracion {
@@ -35,12 +71,20 @@ function esVideo(url: string) {
 export default function PrestadorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const clienteSession = useClienteSession();
 
   const [prestador, setPrestador] = useState<Prestador | null>(null);
   const [valoraciones, setValoraciones] = useState<Valoracion[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiado, setCopiado] = useState(false);
   const [galeriaIdx, setGaleriaIdx] = useState(0);
+
+  const [mostrarContacto, setMostrarContacto] = useState(false);
+  const [contactoNombre, setContactoNombre] = useState('');
+  const [contactoTelefono, setContactoTelefono] = useState('');
+  const [contactoDescripcion, setContactoDescripcion] = useState('');
+  const [errorTelefono, setErrorTelefono] = useState('');
+  const [enviandoContacto, setEnviandoContacto] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -51,19 +95,28 @@ export default function PrestadorPage() {
   async function cargar() {
     setLoading(true);
     try {
-      const [{ data: p }, { data: v }] = await Promise.all([
-        supabase
+      let prestadorResult = await supabase
+        .from('prestadores')
+        .select('id, nombre, apellido, categoria, zona, foto_url, galeria_urls, descripcion, telefono, verification_status, is_featured, is_top, ranking_score, created_at')
+        .eq('id', id)
+        .maybeSingle();
+
+      // Fallback: select mínimo si la migración del modelo de leads aún no corrió.
+      if (prestadorResult.error) {
+        prestadorResult = await supabase
           .from('prestadores')
           .select('id, nombre, apellido, categoria, zona, foto_url, galeria_urls, descripcion, telefono')
           .eq('id', id)
-          .maybeSingle(),
-        supabase
-          .from('valoraciones')
-          .select('id, nombre_cliente, puntuacion, comentario, created_at')
-          .eq('prestador_id', id)
-          .order('created_at', { ascending: false }),
-      ]);
-      setPrestador(p ?? null);
+          .maybeSingle();
+      }
+
+      const { data: v } = await supabase
+        .from('valoraciones')
+        .select('id, nombre_cliente, puntuacion, comentario, created_at')
+        .eq('prestador_id', id)
+        .order('created_at', { ascending: false });
+
+      setPrestador(prestadorResult.data ?? null);
       setValoraciones(v ?? []);
     } catch (e) {
       console.error(e);
@@ -76,6 +129,43 @@ export default function PrestadorPage() {
     navigator.clipboard.writeText(window.location.href);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2500);
+  }
+
+  async function handleConfirmarContacto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!prestador || !contactoNombre.trim() || !contactoTelefono.trim()) return;
+
+    const soloDigitos = contactoTelefono.replace(/\D/g, '');
+    if (soloDigitos.length < 10) {
+      setErrorTelefono('El teléfono debe tener al menos 10 dígitos');
+      return;
+    }
+
+    setEnviandoContacto(true);
+    try {
+      // Síncrono, antes de cualquier await: evita el bloqueo de pop-ups del navegador.
+      const mensaje = `Hola ${prestador.nombre}, te contacto desde MrServicios por ${prestador.categoria}. Soy vecino/a de San Isidro.${contactoDescripcion.trim() ? `\n\n${contactoDescripcion.trim()}` : ''}`;
+      const numeroPrestador = prestador.telefono?.replace(/\D/g, '');
+      if (numeroPrestador) {
+        window.open(`https://wa.me/549${numeroPrestador}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      }
+
+      await leadsApi.crearLead({
+        prestador_id: prestador.id,
+        vecino_nombre: contactoNombre.trim(),
+        vecino_telefono: soloDigitos,
+        categoria: prestador.categoria,
+        servicio_descripcion: contactoDescripcion.trim() || undefined,
+        source: 'public_site',
+      });
+
+      clienteSession.marcarReservado(prestador.id);
+      setMostrarContacto(false);
+    } catch (err) {
+      console.error('Error al crear el contacto:', err);
+    } finally {
+      setEnviandoContacto(false);
+    }
   }
 
   const promedio =
@@ -209,6 +299,9 @@ export default function PrestadorPage() {
                     </span>
                   )}
                 </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {renderBadges(prestador, valoraciones.length)}
+                </div>
               </div>
             </div>
 
@@ -220,7 +313,7 @@ export default function PrestadorPage() {
             {/* Botón de acción principal */}
             <div className="pt-1">
               <button
-                onClick={() => navigate(`/reservar/${prestador.id}`)}
+                onClick={() => setMostrarContacto(true)}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-sm transition-colors cursor-pointer"
               >
                 <i className="ri-whatsapp-line text-lg" />
@@ -265,6 +358,79 @@ export default function PrestadorPage() {
         )}
 
       </div>
+
+      {/* ── Modal de contacto (previo a abrir WhatsApp) ── */}
+      {mostrarContacto && prestador && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          onClick={() => !enviandoContacto && setMostrarContacto(false)}
+        >
+          <form
+            onSubmit={handleConfirmarContacto}
+            className="bg-[#16213e] rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-w-md w-full border border-[#e2b040]/20 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-bold text-white">Contactar a {prestador.nombre}</h3>
+              <button type="button" onClick={() => setMostrarContacto(false)} className="p-2 text-gray-400 hover:text-white cursor-pointer">
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-5">
+              Te conectamos por WhatsApp con {prestador.nombre}. Estos datos quedan registrados para que el prestador pueda gestionar tu pedido.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Tu nombre</label>
+                <input
+                  type="text"
+                  value={contactoNombre}
+                  onChange={(e) => setContactoNombre(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Ej: María González"
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Tu teléfono</label>
+                <input
+                  type="tel"
+                  value={contactoTelefono}
+                  onChange={(e) => { setContactoTelefono(e.target.value); setErrorTelefono(''); }}
+                  required
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors"
+                  placeholder="Ej: 3511234567"
+                  style={{ fontSize: '16px' }}
+                />
+                {errorTelefono && <p className="text-red-400 text-xs mt-1">{errorTelefono}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">¿Qué necesitás? (opcional)</label>
+                <textarea
+                  value={contactoDescripcion}
+                  onChange={(e) => { if (e.target.value.length <= 300) setContactoDescripcion(e.target.value); }}
+                  maxLength={300}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-[#1a1a2e] border border-[#e2b040]/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#e2b040] transition-colors resize-none"
+                  placeholder="Contale brevemente qué necesitás..."
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={enviandoContacto || !contactoNombre.trim() || !contactoTelefono.trim()}
+              className="w-full mt-5 flex items-center justify-center gap-2 py-4 bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl font-bold text-base transition-colors cursor-pointer shadow-md shadow-[#25D366]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="ri-whatsapp-line text-xl" />
+              {enviandoContacto ? 'Abriendo WhatsApp...' : 'Continuar a WhatsApp'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

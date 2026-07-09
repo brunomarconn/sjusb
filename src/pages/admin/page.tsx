@@ -4,12 +4,17 @@ import { chatApi } from '../../api/chatApi';
 import type { Conversacion, ConversacionResumen, Mensaje } from '../../types/chat';
 import { formatFechaCompleta, formatHoraChat } from '../../types/chat';
 import PrestadoresAdmin from './PrestadoresAdmin';
-import ReservasAdmin from './ReservasAdmin';
+import DashboardAdmin from './DashboardAdmin';
+import TrabajosAdmin from './TrabajosAdmin';
+import ResenasAdmin from './ResenasAdmin';
+import MembresiasAdmin from './MembresiasAdmin';
+import ConfiguracionAdmin from './ConfiguracionAdmin';
+import ReportesAdmin from './ReportesAdmin';
 import { useAdminSession } from '../../context/AdminSessionContext';
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET as string | undefined;
 
-type AdminView = 'home' | 'mensajes' | 'prestadores' | 'reservas';
+type AdminView = 'home' | 'mensajes' | 'prestadores' | 'dashboard' | 'trabajos' | 'resenas' | 'membresias' | 'config' | 'reportes';
 
 function LoginScreen({
   passwordInput,
@@ -66,26 +71,71 @@ function LoginScreen({
 function AdminHome({
   onEntrarMensajes,
   onEntrarPrestadores,
-  onEntrarReservas,
+  onEntrarDashboard,
+  onEntrarTrabajos,
+  onEntrarResenas,
+  onEntrarMembresias,
+  onEntrarConfig,
+  onEntrarReportes,
 }: {
   onEntrarMensajes: () => void;
   onEntrarPrestadores: () => void;
-  onEntrarReservas: () => void;
+  onEntrarDashboard: () => void;
+  onEntrarTrabajos: () => void;
+  onEntrarResenas: () => void;
+  onEntrarMembresias: () => void;
+  onEntrarConfig: () => void;
+  onEntrarReportes: () => void;
 }) {
   const modulos = [
     {
-      icono: 'ri-calendar-check-line',
-      titulo: 'Reservas y Comisiones',
-      desc: 'Ver reservas activas, procesar trabajos concretados, gestionar comisiones y links de MercadoPago.',
-      cta: 'Gestionar reservas',
-      onClick: onEntrarReservas,
+      icono: 'ri-dashboard-3-line',
+      titulo: 'Dashboard general',
+      desc: 'KPIs de leads, conversión, prestadores, membresías y reputación del barrio.',
+      cta: 'Ver dashboard',
+      onClick: onEntrarDashboard,
     },
     {
       icono: 'ri-user-star-line',
       titulo: 'Prestadores',
-      desc: 'Gestión completa: alta, edición, pausar/activar, eliminar, valoraciones y control de estado.',
+      desc: 'Gestión completa: alta, edición, verificación, destacados, sanciones y control de estado.',
       cta: 'Gestionar prestadores',
       onClick: onEntrarPrestadores,
+    },
+    {
+      icono: 'ri-briefcase-4-line',
+      titulo: 'Leads / Trabajos',
+      desc: 'Ver todos los contactos generados, cambiar estados, plantillas de WhatsApp y validaciones.',
+      cta: 'Gestionar trabajos',
+      onClick: onEntrarTrabajos,
+    },
+    {
+      icono: 'ri-star-line',
+      titulo: 'Reseñas',
+      desc: 'Moderar reseñas: mostrar u ocultar, filtrar por prestador.',
+      cta: 'Gestionar reseñas',
+      onClick: onEntrarResenas,
+    },
+    {
+      icono: 'ri-vip-crown-line',
+      titulo: 'Membresías / Pagos',
+      desc: 'Generar membresías, links de MercadoPago, marcar pagos y ver quién superó el umbral gratis.',
+      cta: 'Gestionar membresías',
+      onClick: onEntrarMembresias,
+    },
+    {
+      icono: 'ri-settings-3-line',
+      titulo: 'Configuración del barrio',
+      desc: 'Nombre, fase del negocio, precios, flags y pesos del ranking.',
+      cta: 'Configurar',
+      onClick: onEntrarConfig,
+    },
+    {
+      icono: 'ri-file-chart-2-line',
+      titulo: 'Reportes',
+      desc: 'Resumen listo para mostrarle a la administración de San Isidro.',
+      cta: 'Ver reportes',
+      onClick: onEntrarReportes,
     },
     {
       icono: 'ri-chat-3-line',
@@ -97,7 +147,7 @@ function AdminHome({
   ];
 
   return (
-    <div className="max-w-3xl grid sm:grid-cols-2 gap-4">
+    <div className="max-w-5xl grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {modulos.map((m) => (
         <button
           key={m.titulo}
@@ -424,7 +474,12 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500">
                 {vista === 'home' ? 'Elegí un módulo' :
                  vista === 'mensajes' ? 'Visualizador de mensajes' :
-                 vista === 'reservas' ? 'Reservas y comisiones' :
+                 vista === 'dashboard' ? 'Dashboard general' :
+                 vista === 'trabajos' ? 'Leads y trabajos' :
+                 vista === 'resenas' ? 'Reseñas' :
+                 vista === 'membresias' ? 'Membresías y pagos' :
+                 vista === 'config' ? 'Configuración del barrio' :
+                 vista === 'reportes' ? 'Reportes para el barrio' :
                  'Gestión de prestadores'}
               </p>
             </div>
@@ -458,11 +513,26 @@ export default function AdminPage() {
           <AdminHome
             onEntrarMensajes={() => setVista('mensajes')}
             onEntrarPrestadores={() => setVista('prestadores')}
-            onEntrarReservas={() => setVista('reservas')}
+            onEntrarDashboard={() => setVista('dashboard')}
+            onEntrarTrabajos={() => setVista('trabajos')}
+            onEntrarResenas={() => setVista('resenas')}
+            onEntrarMembresias={() => setVista('membresias')}
+            onEntrarConfig={() => setVista('config')}
+            onEntrarReportes={() => setVista('reportes')}
           />
         )}
 
-        {vista === 'reservas' && <ReservasAdmin />}
+        {vista === 'dashboard' && <DashboardAdmin />}
+
+        {vista === 'trabajos' && <TrabajosAdmin />}
+
+        {vista === 'resenas' && <ResenasAdmin />}
+
+        {vista === 'membresias' && <MembresiasAdmin />}
+
+        {vista === 'config' && <ConfiguracionAdmin />}
+
+        {vista === 'reportes' && <ReportesAdmin />}
 
         {vista === 'prestadores' && <PrestadoresAdmin />}
 

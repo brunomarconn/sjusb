@@ -13,16 +13,6 @@ const ZONAS = [
   'Villa Allende', 'Rio Ceballos', 'Mendiolaza', 'Unquillo', 'Saldán',
 ];
 
-const DIAS_SEMANA = [
-  { valor: 1, nombre: 'Lunes' },
-  { valor: 2, nombre: 'Martes' },
-  { valor: 3, nombre: 'Miércoles' },
-  { valor: 4, nombre: 'Jueves' },
-  { valor: 5, nombre: 'Viernes' },
-  { valor: 6, nombre: 'Sábado' },
-  { valor: 0, nombre: 'Domingo' },
-];
-
 const inp =
   'w-full bg-[#1a1a2e] border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#e2b040]/50 text-sm';
 
@@ -34,6 +24,19 @@ interface Valoracion {
   puntuacion: number;
   comentario: string;
   created_at: string;
+}
+
+type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected';
+type PlanPhase = 'free_seed' | 'membership' | 'mixed' | 'premium';
+type MembershipStatus = 'not_required' | 'trial' | 'active' | 'past_due' | 'cancelled';
+type SancionTipo = 'reminder' | 'warning' | 'ranking_drop' | 'temporary_suspension' | 'permanent_ban';
+
+interface Sancion {
+  id: string;
+  tipo: SancionTipo;
+  reason?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
 }
 
 interface PrestadorAdmin {
@@ -52,13 +55,26 @@ interface PrestadorAdmin {
   trabajos_completados: number;
   created_at: string;
   valoraciones?: Valoracion[];
+  verification_status: VerificationStatus;
+  plan_phase: PlanPhase;
+  membership_status: MembershipStatus;
+  monthly_price?: number | null;
+  discount_rate: number;
+  is_featured: boolean;
+  is_top: boolean;
+  ranking_score: number;
+  admin_notes?: string | null;
+  total_leads: number;
+  average_rating: number;
+  review_count: number;
 }
 
-type FormData = Omit<PrestadorAdmin, 'id' | 'created_at' | 'valoraciones'>;
+type FormData = Omit<PrestadorAdmin,
+  'id' | 'created_at' | 'valoraciones' | 'verification_status' | 'plan_phase' | 'membership_status'
+  | 'monthly_price' | 'discount_rate' | 'is_featured' | 'is_top' | 'ranking_score' | 'admin_notes'
+  | 'total_leads' | 'average_rating' | 'review_count'>;
 type EstadoFiltro = 'todos' | 'activos' | 'pausados';
-type TabEdicion = 'datos' | 'servicio' | 'imagenes' | 'disponibilidad' | 'estado';
-type Turno = 'mañana' | 'tarde';
-type DisponibilidadMap = Record<number, Turno[]>;
+type TabEdicion = 'datos' | 'servicio' | 'imagenes' | 'estado' | 'estado_avanzado';
 type ModalConfirm = { tipo: 'eliminar' | 'pausar' | 'activar'; prestador: PrestadorAdmin };
 type GaleriaPreview = { url: string; esVideo: boolean; remote?: boolean };
 
@@ -66,6 +82,31 @@ const EMPTY_FORM: FormData = {
   nombre: '', apellido: '', dni: '', email: '', telefono: '',
   categoria: 'electricista', zona: '', foto_url: '', galeria_urls: null, descripcion: '',
   enabled: true, trabajos_completados: 0,
+};
+
+const EMPTY_ESTADO_AVANZADO = {
+  verification_status: 'none' as VerificationStatus,
+  plan_phase: 'free_seed' as PlanPhase,
+  membership_status: 'not_required' as MembershipStatus,
+  monthly_price: '' as string | number,
+  discount_rate: 0.5,
+  is_featured: false,
+  is_top: false,
+  admin_notes: '',
+};
+
+const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
+  none: 'Sin verificar', pending: 'Verificación pendiente', verified: 'Verificado', rejected: 'Rechazado',
+};
+const PLAN_PHASE_LABELS: Record<PlanPhase, string> = {
+  free_seed: 'Gratis (siembra)', membership: 'Membresía', mixed: 'Mixto', premium: 'Premium',
+};
+const MEMBERSHIP_STATUS_LABELS: Record<MembershipStatus, string> = {
+  not_required: 'No requiere', trial: 'Prueba', active: 'Activa', past_due: 'Vencida', cancelled: 'Cancelada',
+};
+const SANCION_TIPO_LABELS: Record<SancionTipo, string> = {
+  reminder: 'Recordatorio', warning: 'Advertencia', ranking_drop: 'Baja de ranking',
+  temporary_suspension: 'Suspensión temporal', permanent_ban: 'Baja definitiva',
 };
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -87,7 +128,9 @@ function getErrorMessage(error: unknown): string {
 
 const CATEGORIA_CUSTOM = '__custom__';
 const PRESTADORES_BASE_SELECT =
-  'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at';
+  'id, nombre, apellido, dni, email, telefono, categoria, zona, foto_url, galeria_urls, descripcion, created_at, enabled, trabajos_completados,' +
+  ' verification_status, plan_phase, membership_status, monthly_price, discount_rate, is_featured, is_top, ranking_score, admin_notes,' +
+  ' total_leads, average_rating, review_count';
 
 function normalizeCategoria(categoria: string): string {
   return categoria.trim().toLowerCase();
@@ -182,10 +225,13 @@ export default function PrestadoresAdmin() {
   const [zonaPersonalizada, setZonaPersonalizada] = useState('');
   const [mostrandoInputCategoria, setMostrandoInputCategoria] = useState(false);
   const [tabEdicion, setTabEdicion] = useState<TabEdicion>('datos');
-  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadMap>({});
-  const [guardandoDisp, setGuardandoDisp] = useState(false);
-  const [dispGuardada, setDispGuardada] = useState(false);
   const [categoriasDisponibles, setCategoriasDisponibles] = useState<string[]>(() => [...CATEGORIAS]);
+  const [estadoAvanzado, setEstadoAvanzado] = useState({ ...EMPTY_ESTADO_AVANZADO });
+  const [guardandoAvanzado, setGuardandoAvanzado] = useState(false);
+  const [avanzadoGuardado, setAvanzadoGuardado] = useState(false);
+  const [sanciones, setSanciones] = useState<Sancion[]>([]);
+  const [nuevaSancion, setNuevaSancion] = useState<{ tipo: SancionTipo; reason: string }>({ tipo: 'reminder', reason: '' });
+  const [enviandoSancion, setEnviandoSancion] = useState(false);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState('');
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
@@ -259,6 +305,18 @@ export default function PrestadoresAdmin() {
       trabajos_completados: prestador.trabajos_completados ?? 0,
       created_at: prestador.created_at || new Date(0).toISOString(),
       valoraciones: valoracionesPorPrestador.get(prestador.id) || [],
+      verification_status: prestador.verification_status ?? 'none',
+      plan_phase: prestador.plan_phase ?? 'free_seed',
+      membership_status: prestador.membership_status ?? 'not_required',
+      monthly_price: prestador.monthly_price ?? null,
+      discount_rate: prestador.discount_rate ?? 0.5,
+      is_featured: prestador.is_featured ?? false,
+      is_top: prestador.is_top ?? false,
+      ranking_score: prestador.ranking_score ?? 0,
+      admin_notes: prestador.admin_notes ?? '',
+      total_leads: prestador.total_leads ?? 0,
+      average_rating: prestador.average_rating ?? 0,
+      review_count: prestador.review_count ?? 0,
     })) as PrestadorAdmin[];
   }
 
@@ -300,48 +358,69 @@ export default function PrestadoresAdmin() {
     setForm((prev) => ({ ...prev, zona: zonas.join(', ') }));
   };
 
-  const cargarDisponibilidad = async (prestadorId: string) => {
-    const { data } = await supabase
-      .from('disponibilidad_prestadores')
-      .select('dia_semana, turno')
-      .eq('prestador_id', prestadorId);
-    if (data) {
-      const mapa: DisponibilidadMap = {};
-      data.forEach(({ dia_semana, turno }: { dia_semana: number; turno: Turno }) => {
-        if (!mapa[dia_semana]) mapa[dia_semana] = [];
-        mapa[dia_semana].push(turno);
-      });
-      setDisponibilidad(mapa);
+  const cargarSanciones = async (prestadorId: string) => {
+    try {
+      const result = await callAdminApi('listar_sanciones', { prestador_id: prestadorId });
+      setSanciones((result.sanciones as Sancion[]) || []);
+    } catch {
+      setSanciones([]);
     }
   };
 
-  const toggleTurno = (dia: number, turno: Turno) => {
-    setDisponibilidad((prev) => {
-      const actual = prev[dia] || [];
-      const nuevo = actual.includes(turno)
-        ? actual.filter((t) => t !== turno)
-        : [...actual, turno];
-      return { ...prev, [dia]: nuevo };
-    });
+  const guardarEstadoAvanzado = async (prestadorId: string) => {
+    setGuardandoAvanzado(true);
+    try {
+      await callAdminApi('actualizar', {
+        id: prestadorId,
+        payload: {
+          verification_status: estadoAvanzado.verification_status,
+          plan_phase: estadoAvanzado.plan_phase,
+          membership_status: estadoAvanzado.membership_status,
+          monthly_price: estadoAvanzado.monthly_price === '' ? null : Number(estadoAvanzado.monthly_price),
+          discount_rate: Number(estadoAvanzado.discount_rate),
+          is_featured: estadoAvanzado.is_featured,
+          is_top: estadoAvanzado.is_top,
+          admin_notes: estadoAvanzado.admin_notes,
+        },
+      });
+      setAvanzadoGuardado(true);
+      setTimeout(() => setAvanzadoGuardado(false), 3000);
+      showToast('Estado avanzado guardado ✓');
+      await cargar();
+    } catch (e) {
+      showToast(getErrorMessage(e) || 'Error al guardar', false);
+    } finally {
+      setGuardandoAvanzado(false);
+    }
   };
 
-  const guardarDisponibilidad = async (prestadorId: string) => {
-    setGuardandoDisp(true);
+  const crearSancion = async (prestadorId: string) => {
+    setEnviandoSancion(true);
     try {
-      const entradas: { prestador_id: string; dia_semana: number; turno: string }[] = [];
-      for (const [dia, turnos] of Object.entries(disponibilidad)) {
-        for (const turno of turnos) {
-          entradas.push({ prestador_id: prestadorId, dia_semana: Number(dia), turno });
-        }
-      }
-      await callAdminApi('gestionar_disponibilidad', { prestador_id: prestadorId, entradas });
-      setDispGuardada(true);
-      setTimeout(() => setDispGuardada(false), 3000);
-      showToast('Disponibilidad guardada ✓');
+      await callAdminApi('crear_sancion', {
+        prestador_id: prestadorId,
+        tipo: nuevaSancion.tipo,
+        reason: nuevaSancion.reason.trim() || undefined,
+      });
+      setNuevaSancion({ tipo: 'reminder', reason: '' });
+      showToast('Sanción registrada');
+      await cargarSanciones(prestadorId);
+      await cargar();
     } catch (e) {
-      showToast(getErrorMessage(e) || 'Error al guardar disponibilidad', false);
+      showToast(getErrorMessage(e) || 'Error al registrar sanción', false);
     } finally {
-      setGuardandoDisp(false);
+      setEnviandoSancion(false);
+    }
+  };
+
+  const resolverSancion = async (prestadorId: string, sancionId: string) => {
+    try {
+      await callAdminApi('resolver_sancion', { id: sancionId, prestador_id: prestadorId });
+      showToast('Sanción resuelta');
+      await cargarSanciones(prestadorId);
+      await cargar();
+    } catch (e) {
+      showToast(getErrorMessage(e) || 'Error al resolver sanción', false);
     }
   };
 
@@ -438,8 +517,9 @@ export default function PrestadoresAdmin() {
     setZonaPersonalizada('');
     setMostrandoInputCategoria(false);
     setTabEdicion('datos');
-    setDisponibilidad({});
-    setDispGuardada(false);
+    setEstadoAvanzado({ ...EMPTY_ESTADO_AVANZADO });
+    setAvanzadoGuardado(false);
+    setSanciones([]);
     setFotoFile(null);
     setFotoPreview('');
     setGaleriaFiles([]);
@@ -461,9 +541,18 @@ export default function PrestadoresAdmin() {
       !categoriasDisponibles.some((cat) => normalizeCategoria(cat) === normalizeCategoria(p.categoria))
     );
     setTabEdicion('datos');
-    setDisponibilidad({});
-    setDispGuardada(false);
-    cargarDisponibilidad(p.id);
+    setEstadoAvanzado({
+      verification_status: p.verification_status,
+      plan_phase: p.plan_phase,
+      membership_status: p.membership_status,
+      monthly_price: p.monthly_price ?? '',
+      discount_rate: p.discount_rate,
+      is_featured: p.is_featured,
+      is_top: p.is_top,
+      admin_notes: p.admin_notes ?? '',
+    });
+    setAvanzadoGuardado(false);
+    cargarSanciones(p.id);
     setZonasSeleccionadas(
       p.zona
         ? p.zona.split(',').map((z) => z.trim()).filter(Boolean)
@@ -560,8 +649,6 @@ export default function PrestadoresAdmin() {
       } else {
         const password = form.dni.trim();
         await insertPrestador({ ...payload, password });
-        // La Edge Function crea la disponibilidad por defecto (L-V, mañana y tarde)
-
         showToast('Prestador creado correctamente ✓');
       }
 
@@ -753,6 +840,15 @@ export default function PrestadoresAdmin() {
                           {p.nombre} {p.apellido}
                         </h3>
                         <Badge activo={activo} />
+                        {p.verification_status === 'verified' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-green-400">Verificado</span>
+                        )}
+                        {p.is_top && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[#e2b040]/15 text-[#e2b040]">TOP</span>
+                        )}
+                        {p.is_featured && !p.is_top && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[#f0d080]/15 text-[#f0d080]">Destacado</span>
+                        )}
                       </div>
 
                       <p className="text-[#e2b040] text-xs font-medium capitalize mb-1">{p.categoria}</p>
@@ -848,8 +944,8 @@ export default function PrestadoresAdmin() {
                 { id: 'datos' as TabEdicion, icon: 'ri-user-line', label: 'Datos' },
                 { id: 'servicio' as TabEdicion, icon: 'ri-briefcase-line', label: 'Servicio' },
                 { id: 'imagenes' as TabEdicion, icon: 'ri-image-line', label: 'Imágenes' },
-                ...(editando ? [{ id: 'disponibilidad' as TabEdicion, icon: 'ri-calendar-check-line', label: 'Horarios' }] : []),
                 ...(editando ? [{ id: 'estado' as TabEdicion, icon: 'ri-settings-3-line', label: 'Estado' }] : []),
+                ...(editando ? [{ id: 'estado_avanzado' as TabEdicion, icon: 'ri-shield-star-line', label: 'Plan y Ranking' }] : []),
               ]).map((tab) => (
                 <button
                   key={tab.id}
@@ -1088,45 +1184,6 @@ export default function PrestadoresAdmin() {
                 </div>
               )}
 
-              {/* ── Tab: Disponibilidad (solo edición) ── */}
-              {tabEdicion === 'disponibilidad' && editando && (
-                <div className="p-5 sm:p-6 space-y-4">
-                  <p className="text-xs text-gray-500">
-                    Seleccioná los días y turnos en que el prestador trabaja. Los clientes verán esta información al reservar.
-                  </p>
-                  <div className="grid gap-2">
-                    {DIAS_SEMANA.map(({ valor, nombre }) => {
-                      const turnos = disponibilidad[valor] || [];
-                      return (
-                        <div key={valor} className="flex items-center bg-[#1a1a2e] rounded-xl px-4 py-3 gap-3">
-                          <span className="text-white font-medium text-sm shrink-0 w-20">{nombre}</span>
-                          <div className="flex gap-2 flex-1">
-                            {(['mañana', 'tarde'] as Turno[]).map((turno) => {
-                              const activo = turnos.includes(turno);
-                              return (
-                                <button
-                                  key={turno}
-                                  type="button"
-                                  onClick={() => toggleTurno(valor, turno)}
-                                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                                    activo
-                                      ? 'bg-[#e2b040] text-[#1a1a2e]'
-                                      : 'bg-[#16213e] border border-white/10 text-gray-500 hover:border-[#e2b040]/30 hover:text-gray-300'
-                                  }`}
-                                >
-                                  <i className={turno === 'mañana' ? 'ri-sun-line' : 'ri-moon-line'}></i>
-                                  {turno === 'mañana' ? 'Mañana' : 'Tarde'}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {/* ── Tab: Estado (solo edición) ── */}
               {tabEdicion === 'estado' && editando && (
                 <div className="p-5 sm:p-6 space-y-5">
@@ -1180,32 +1237,165 @@ export default function PrestadoresAdmin() {
                   </div>
                 </div>
               )}
+
+              {/* ── Tab: Plan y Ranking (solo edición) ── */}
+              {tabEdicion === 'estado_avanzado' && editando && (
+                <div className="p-5 sm:p-6 space-y-5">
+                  <div className="bg-[#1a1a2e] border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-gray-400 text-xs">Ranking score actual</span>
+                    <span className="text-[#e2b040] font-bold text-lg">{editando.ranking_score}</span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Verificación</label>
+                      <select
+                        value={estadoAvanzado.verification_status}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, verification_status: e.target.value as VerificationStatus }))}
+                        className={inp} style={{ fontSize: '16px' }}
+                      >
+                        {Object.entries(VERIFICATION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Fase</label>
+                      <select
+                        value={estadoAvanzado.plan_phase}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, plan_phase: e.target.value as PlanPhase }))}
+                        className={inp} style={{ fontSize: '16px' }}
+                      >
+                        {Object.entries(PLAN_PHASE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Membresía</label>
+                      <select
+                        value={estadoAvanzado.membership_status}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, membership_status: e.target.value as MembershipStatus }))}
+                        className={inp} style={{ fontSize: '16px' }}
+                      >
+                        {Object.entries(MEMBERSHIP_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Cuota mensual</label>
+                      <input
+                        type="number"
+                        value={estadoAvanzado.monthly_price}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, monthly_price: e.target.value }))}
+                        className={inp} style={{ fontSize: '16px' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Descuento (0-1)</label>
+                      <input
+                        type="number" step="0.05" min={0} max={1}
+                        value={estadoAvanzado.discount_rate}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, discount_rate: Number(e.target.value) }))}
+                        className={inp} style={{ fontSize: '16px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                      <input type="checkbox" checked={estadoAvanzado.is_featured}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, is_featured: e.target.checked }))}
+                        className="w-4 h-4 accent-[#e2b040]" />
+                      Destacado
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                      <input type="checkbox" checked={estadoAvanzado.is_top}
+                        onChange={(e) => setEstadoAvanzado((s) => ({ ...s, is_top: e.target.checked }))}
+                        className="w-4 h-4 accent-[#e2b040]" />
+                      TOP
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Notas internas</label>
+                    <textarea
+                      value={estadoAvanzado.admin_notes}
+                      onChange={(e) => setEstadoAvanzado((s) => ({ ...s, admin_notes: e.target.value }))}
+                      rows={3}
+                      className={`${inp} resize-none`}
+                      style={{ fontSize: '16px' }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => guardarEstadoAvanzado(editando.id)}
+                    disabled={guardandoAvanzado}
+                    className="w-full py-2.5 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold text-sm hover:bg-[#e2b040]/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {guardandoAvanzado ? (
+                      <><i className="ri-loader-4-line animate-spin"></i>Guardando...</>
+                    ) : avanzadoGuardado ? (
+                      <><i className="ri-checkbox-circle-line"></i>Guardado</>
+                    ) : (
+                      <><i className="ri-save-line"></i>Guardar plan y ranking</>
+                    )}
+                  </button>
+
+                  {/* Sanciones */}
+                  <div className="pt-4 border-t border-white/5 space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-300">Sanciones</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        value={nuevaSancion.tipo}
+                        onChange={(e) => setNuevaSancion((s) => ({ ...s, tipo: e.target.value as SancionTipo }))}
+                        className={`${inp} flex-1 min-w-[160px]`} style={{ fontSize: '16px' }}
+                      >
+                        {Object.entries(SANCION_TIPO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                      <input
+                        value={nuevaSancion.reason}
+                        onChange={(e) => setNuevaSancion((s) => ({ ...s, reason: e.target.value }))}
+                        placeholder="Motivo (opcional)"
+                        className={`${inp} flex-1 min-w-[160px]`} style={{ fontSize: '16px' }}
+                      />
+                      <button
+                        onClick={() => crearSancion(editando.id)}
+                        disabled={enviandoSancion}
+                        className="px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 rounded-xl text-sm transition-colors disabled:opacity-50"
+                      >
+                        Registrar
+                      </button>
+                    </div>
+                    {sanciones.length === 0 ? (
+                      <p className="text-gray-600 text-xs">Sin sanciones registradas</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {sanciones.map((s) => (
+                          <div key={s.id} className="flex items-center justify-between gap-2 bg-[#1a1a2e] rounded-lg px-3 py-2 text-xs">
+                            <div>
+                              <span className={s.resolved_at ? 'text-gray-500' : 'text-red-300 font-medium'}>{SANCION_TIPO_LABELS[s.tipo]}</span>
+                              {s.reason && <span className="text-gray-500"> — {s.reason}</span>}
+                            </div>
+                            {!s.resolved_at && (
+                              <button onClick={() => resolverSancion(editando.id, s.id)} className="text-[#e2b040] hover:text-[#f0d080] shrink-0">
+                                Resolver
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer fijo */}
             <div className="shrink-0 px-5 sm:px-6 py-4 border-t border-white/10 flex gap-3">
               <button
-                onClick={() => !guardando && !guardandoDisp && setModalForm(false)}
-                disabled={guardando || guardandoDisp}
+                onClick={() => !guardando && setModalForm(false)}
+                disabled={guardando}
                 className="flex-1 py-3 bg-white/5 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition-colors font-medium disabled:opacity-50"
               >
                 Cancelar
               </button>
-              {tabEdicion === 'disponibilidad' && editando ? (
-                <button
-                  onClick={() => guardarDisponibilidad(editando.id)}
-                  disabled={guardandoDisp}
-                  className="flex-1 py-3 bg-[#e2b040] text-[#1a1a2e] rounded-xl font-bold text-sm hover:bg-[#e2b040]/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {guardandoDisp ? (
-                    <><i className="ri-loader-4-line animate-spin"></i>Guardando...</>
-                  ) : dispGuardada ? (
-                    <><i className="ri-checkbox-circle-line"></i>Guardado</>
-                  ) : (
-                    <><i className="ri-save-line"></i>Guardar horarios</>
-                  )}
-                </button>
-              ) : (
+              {tabEdicion !== 'estado_avanzado' && (
                 <button
                   onClick={guardar}
                   disabled={guardando}

@@ -21,7 +21,7 @@ export default function PrestadoresPage() {
   };
 
   if (vista === 'panel' && prestadorSession.dniPrestador) {
-    return <PanelPrestador prestadorData={{ dni: prestadorSession.dniPrestador }} onCerrarSesion={handleCerrarSesion} />;
+    return <PanelPrestador onCerrarSesion={handleCerrarSesion} />;
   }
 
   if (vista === 'registro') {
